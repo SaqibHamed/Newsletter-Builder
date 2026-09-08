@@ -1,0 +1,295 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Einheitliche Newsletter CSS Klassen (Div-Container Architektur, 12px Radius, #E4E4E4 Canvas) */
+.nl-container {
+  width: 600px;
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.nl-card {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  border: 0;
+  box-shadow: none;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.nl-logo-card {
+  padding: 20px;
+  text-align: center;
+}
+
+.nl-logo-card img {
+  height: 36px;
+  width: auto;
+  max-width: 100%;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.nl-content-card {
+  padding: 36px 32px;
+}
+
+.nl-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nl-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #000000;
+  margin: 0;
+}
+
+.nl-heading {
+  font-family: 'Poppins', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #000000;
+  margin: 0;
+}
+
+.nl-paragraph {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #000000;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.nl-graphic {
+  text-align: center;
+  margin: 4px 0;
+}
+
+.nl-graphic img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+}
+
+.nl-caption {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.nl-twocol {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 6px 0;
+}
+
+.nl-twocol-reverse {
+  flex-direction: row-reverse;
+}
+
+.nl-twocol-media {
+  flex: 0 0 42%;
+  max-width: 42%;
+}
+
+.nl-twocol-media img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+}
+
+.nl-twocol-body {
+  flex: 1;
+}
+
+.nl-twocol-body h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #000000;
+  margin: 0 0 6px 0;
+}
+
+.nl-twocol-body p {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #000000;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.nl-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 2px;
+  margin: 4px 0;
+}
+
+.nl-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #000000;
+}
+
+.nl-bullet {
+  color: #1B4B97;
+  font-size: 18px;
+  line-height: 1;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.nl-badge-num {
+  background-color: #1B4B97;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.nl-btn {
+  display: inline-block;
+  background-color: #1B4B97;
+  color: #FFFFFF !important;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 12px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  margin-top: 10px;
+  border: 0;
+  cursor: pointer;
+  text-align: center;
+  box-sizing: border-box;
+  transition: opacity 0.15s ease;
+}
+
+.nl-btn:hover {
+  opacity: 0.9;
+}
+
+.nl-btn-wrap {
+  margin: 10px 0;
+}
+
+.nl-btn-center {
+  text-align: center;
+}
+
+.nl-btn-right {
+  text-align: right;
+}
+
+.nl-btn-cta {
+  /* Exakt einheitliche Grösse und einheitlicher Schriftstil für alle Buttons */
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 12px 24px;
+  border-radius: 12px;
+}
+
+.nl-closing {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #F4F4F5;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #000000;
+}
+
+.nl-closing p {
+  margin-bottom: 12px;
+}
+
+.nl-closing strong {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+}
+
+.nl-closing a {
+  color: #1B4B97;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nl-security-card {
+  background-color: #1B4B97;
+  color: #FFFFFF;
+  padding: 20px 24px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.nl-security-card strong {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.nl-security-card a {
+  color: #FFFFFF;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+/* Backward compatibility classes */
+.v62_58 {
+  width: 600px;
+  max-width: 100%;
+  background: #E4E4E4;
+}
+
+.v62_60 {
+  width: 600px;
+  max-width: 100%;
+  background: #FFFFFF;
+  border-radius: 12px;
+  border: 0;
+  box-shadow: none;
+}

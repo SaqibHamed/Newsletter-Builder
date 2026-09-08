@@ -1,0 +1,1042 @@
+import React, { useState, useEffect } from 'react';
+import {
+  GripVertical,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Trash2,
+  Copy,
+  Plus,
+  Type,
+  Heading as HeadingIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Image as ImageIcon,
+  List as ListIcon,
+  ListOrdered,
+  Columns as ColumnsIcon,
+  MousePointerClick,
+  Sparkles,
+  Mail,
+  Sliders,
+  ExternalLink,
+  Layers,
+  ArrowUpDown,
+} from 'lucide-react';
+import { NewsletterMeta, NewsletterNode, NodeType } from '../types';
+import { createNewNode } from '../utils/nodeFactory';
+
+interface CombinedOverviewEditorProps {
+  nodes: NewsletterNode[];
+  selectedNodeId: string | null;
+  onSelectNode: (id: string | null) => void;
+  onUpdateNode: (node: NewsletterNode) => void;
+  onUpdateNodes: (nodes: NewsletterNode[]) => void;
+  meta: NewsletterMeta;
+  onUpdateMeta: (meta: NewsletterMeta) => void;
+  primaryColor?: string;
+  onResetNodes?: () => void;
+  isDraggingExternal?: boolean;
+}
+
+const sampleImages = [
+  {
+    label: 'Büro & Architektur',
+    url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    label: 'Technologie & Code',
+    url: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    label: 'Zusammenarbeit',
+    url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    label: 'Finanzen & Analyse',
+    url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80',
+  },
+];
+
+export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
+  nodes,
+  selectedNodeId,
+  onSelectNode,
+  onUpdateNode,
+  onUpdateNodes,
+  meta,
+  onUpdateMeta,
+  primaryColor = '#18181b',
+  onResetNodes,
+  isDraggingExternal = false,
+}) => {
+  const [draggedNodeIndex, setDraggedNodeIndex] = useState<number | null>(null);
+  const [activeDropIndex, setActiveDropIndex] = useState<number | null>(null);
+  const [isWindowDragging, setIsWindowDragging] = useState<boolean>(false);
+  const [showMetaSettings, setShowMetaSettings] = useState<boolean>(false);
+
+  // Detect global window drag for smooth drop cells appearance
+  useEffect(() => {
+    let dragCounter = 0;
+
+    const handleDragEnter = () => {
+      dragCounter++;
+      setIsWindowDragging(true);
+    };
+
+    const handleDragLeave = () => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        setIsWindowDragging(false);
+        dragCounter = 0;
+      }
+    };
+
+    const handleDropOrEnd = () => {
+      dragCounter = 0;
+      setIsWindowDragging(false);
+      setActiveDropIndex(null);
+      setDraggedNodeIndex(null);
+    };
+
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('dragend', handleDropOrEnd);
+    window.addEventListener('drop', handleDropOrEnd);
+
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('dragend', handleDropOrEnd);
+      window.removeEventListener('drop', handleDropOrEnd);
+    };
+  }, []);
+
+  const isDraggingAny = isDraggingExternal || draggedNodeIndex !== null || isWindowDragging;
+
+  // Helper to get icon & label for node type
+  const getNodeInfo = (type: NodeType) => {
+    switch (type) {
+      case 'title':
+        return {
+          icon: <Type className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Titel',
+          badge: '24px',
+        };
+      case 'heading':
+        return {
+          icon: <HeadingIcon className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Überschrift',
+          badge: '16px',
+        };
+      case 'paragraph':
+        return {
+          icon: <AlignLeft className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Textabschnitt',
+          badge: '14px',
+        };
+      case 'graphic':
+        return {
+          icon: <ImageIcon className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Grafik',
+          badge: 'Bild',
+        };
+      case 'bullet_list':
+        return {
+          icon: <ListIcon className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Aufzählung Listed',
+          badge: 'Bullet',
+        };
+      case 'numbered_list':
+        return {
+          icon: <ListOrdered className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Aufzählung Nummeriert',
+          badge: '1, 2, 3',
+        };
+      case 'two_col_left_graphic':
+        return {
+          icon: <ColumnsIcon className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Links Grafik / Rechts Text',
+          badge: '2-Spalten',
+        };
+      case 'two_col_right_graphic':
+        return {
+          icon: <ColumnsIcon className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Rechts Grafik / Links Text',
+          badge: '2-Spalten',
+        };
+      case 'button_cta':
+        return {
+          icon: <MousePointerClick className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Button / CTA',
+          badge: 'Link',
+        };
+      default:
+        return {
+          icon: <Layers className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Baustein',
+          badge: 'Node',
+        };
+    }
+  };
+
+  // Node summary text for header preview
+  const getNodeSummary = (node: NewsletterNode) => {
+    switch (node.type) {
+      case 'title':
+      case 'heading':
+      case 'paragraph':
+        return node.text ? node.text.slice(0, 42) + (node.text.length > 42 ? '…' : '') : '(Leer)';
+      case 'graphic':
+        return node.altText || node.caption || 'Grafik';
+      case 'bullet_list':
+      case 'numbered_list':
+        return `${node.items.length} Aufzählungspunkte`;
+      case 'two_col_left_graphic':
+      case 'two_col_right_graphic':
+        return node.heading || '2 Inhalte nebeneinander';
+      case 'button_cta':
+        return `Button: "${node.label}"`;
+      default:
+        return '';
+    }
+  };
+
+  // Move operations
+  const moveNode = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= nodes.length) return;
+    const updated = [...nodes];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    onUpdateNodes(updated);
+  };
+
+  const duplicateNode = (index: number) => {
+    const original = nodes[index];
+    const cloned: NewsletterNode = JSON.parse(JSON.stringify(original));
+    cloned.id = `node-${cloned.type}-${Date.now()}`;
+    const updated = [...nodes];
+    updated.splice(index + 1, 0, cloned);
+    onUpdateNodes(updated);
+    onSelectNode(cloned.id);
+  };
+
+  const deleteNode = (index: number) => {
+    const deletedId = nodes[index].id;
+    const updated = nodes.filter((_, i) => i !== index);
+    onUpdateNodes(updated);
+    if (selectedNodeId === deletedId) {
+      onSelectNode(updated[Math.min(index, updated.length - 1)]?.id || null);
+    }
+  };
+
+  // HTML5 Drag & Drop for reordering and incoming palette drops
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedNodeIndex(index);
+    e.dataTransfer.setData('application/json', JSON.stringify({ source: 'overview', index }));
+    e.dataTransfer.setData('text/plain', `overview:${index}`);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveDropIndex(null);
+    setDraggedNodeIndex(null);
+    setIsWindowDragging(false);
+
+    try {
+      let paletteType: NodeType | null = null;
+      const rawText = e.dataTransfer.getData('text/plain')?.trim();
+      const validTypes: NodeType[] = [
+        'title',
+        'heading',
+        'paragraph',
+        'graphic',
+        'bullet_list',
+        'numbered_list',
+        'two_col_left_graphic',
+        'two_col_right_graphic',
+        'button_cta',
+      ];
+
+      if (rawText && validTypes.includes(rawText as NodeType)) {
+        paletteType = rawText as NodeType;
+      }
+
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (dataStr) {
+        try {
+          const parsed = JSON.parse(dataStr);
+          if (parsed?.type && validTypes.includes(parsed.type)) {
+            paletteType = parsed.type;
+          }
+          // Internal reordering
+          if (parsed?.source === 'overview' && typeof parsed.index === 'number') {
+            const fromIndex = parsed.index;
+            if (fromIndex === targetIndex || fromIndex === targetIndex - 1) return;
+            const updated = [...nodes];
+            const [moved] = updated.splice(fromIndex, 1);
+            const insertIndex = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
+            updated.splice(insertIndex, 0, moved);
+            onUpdateNodes(updated);
+            onSelectNode(moved.id);
+            return;
+          }
+        } catch (err) {}
+      }
+
+      if (paletteType) {
+        const newNode = createNewNode(paletteType);
+        const updated = [...nodes];
+        const safeIndex = Math.max(0, Math.min(targetIndex, updated.length));
+        updated.splice(safeIndex, 0, newNode);
+        onUpdateNodes(updated);
+        onSelectNode(newNode.id);
+        return;
+      }
+
+      // Reordering fallback using local state
+      if (draggedNodeIndex !== null) {
+        const fromIndex = draggedNodeIndex;
+        if (fromIndex === targetIndex || fromIndex === targetIndex - 1) return;
+        const updated = [...nodes];
+        const [moved] = updated.splice(fromIndex, 1);
+        const insertIndex = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
+        updated.splice(insertIndex, 0, moved);
+        onUpdateNodes(updated);
+        onSelectNode(moved.id);
+      }
+    } catch (err) {
+      console.error('Drop error', err);
+    }
+  };
+
+  const renderDropZone = (targetIndex: number) => {
+    const isOver = activeDropIndex === targetIndex;
+    const isAtEnd = targetIndex === nodes.length;
+
+    // Bottom slot at the end of the list
+    if (isAtEnd) {
+      if (nodes.length === 0) {
+        return (
+          <div
+            key={`drop-zone-${targetIndex}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.dataTransfer.dropEffect = 'copy';
+              if (activeDropIndex !== targetIndex) setActiveDropIndex(targetIndex);
+            }}
+            onDragLeave={(e) => {
+              e.stopPropagation();
+              if (activeDropIndex === targetIndex) setActiveDropIndex(null);
+            }}
+            onDrop={(e) => handleDrop(e, targetIndex)}
+            className={`p-6 border-2 border-dashed rounded-lg text-center flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
+              isOver
+                ? 'border-zinc-900 bg-zinc-100 text-zinc-900 shadow-xs'
+                : 'border-zinc-300 bg-zinc-50 text-zinc-500 hover:border-zinc-400'
+            }`}
+          >
+            <Plus className="w-5 h-5 text-zinc-400" />
+            <span className="text-xs font-semibold">
+              {isOver ? 'Hier loslassen zum Platzieren' : 'Ersten Baustein hierher ziehen oder links anklicken'}
+            </span>
+          </div>
+        );
+      }
+
+      // Subtle bottom drop slot - only expands/highlights when actively hovered
+      return (
+        <div
+          key={`drop-zone-${targetIndex}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'copy';
+            if (activeDropIndex !== targetIndex) setActiveDropIndex(targetIndex);
+          }}
+          onDragLeave={(e) => {
+            e.stopPropagation();
+            if (activeDropIndex === targetIndex) setActiveDropIndex(null);
+          }}
+          onDrop={(e) => handleDrop(e, targetIndex)}
+          className={`transition-all duration-150 border-2 border-dashed rounded-lg text-center flex items-center justify-center cursor-pointer select-none ${
+            isOver
+              ? 'p-3.5 border-zinc-900 bg-zinc-100 text-zinc-900 font-semibold shadow-xs'
+              : 'p-2.5 border-zinc-200 hover:border-zinc-300 text-zinc-400 bg-white hover:text-zinc-600'
+          }`}
+        >
+          <span className="text-xs flex items-center justify-center gap-1.5 pointer-events-none">
+            <Plus className={`w-3.5 h-3.5 ${isOver ? 'text-zinc-900' : 'text-zinc-400'}`} />
+            <span>
+              {isOver ? 'Hier am Ende platzieren' : '+ Baustein am Ende anfügen'}
+            </span>
+          </span>
+        </div>
+      );
+    }
+
+    // Between nodes or at top: ONLY shown if activeDropIndex === targetIndex!
+    // When not hovered, it's just a slim hit area to detect dragover without moving UI
+    if (!isOver) {
+      return (
+        <div
+          key={`drop-gap-${targetIndex}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'copy';
+            if (activeDropIndex !== targetIndex) setActiveDropIndex(targetIndex);
+          }}
+          className="h-2 -my-1 relative z-10"
+        />
+      );
+    }
+
+    // Active hover drop zone: clearly shows the insertion position right under the cursor
+    return (
+      <div
+        key={`drop-zone-${targetIndex}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDragLeave={(e) => {
+          e.stopPropagation();
+          if (activeDropIndex === targetIndex) {
+            setActiveDropIndex(null);
+          }
+        }}
+        onDrop={(e) => handleDrop(e, targetIndex)}
+        className="p-3 my-1 border-2 border-dashed border-zinc-900 bg-zinc-100 text-zinc-900 font-semibold text-xs rounded-lg text-center flex items-center justify-center gap-1.5 shadow-xs transition-all duration-150 select-none animate-fadeIn"
+      >
+        <Plus className="w-3.5 h-3.5 text-zinc-900 pointer-events-none" />
+        <span className="pointer-events-none">Hier loslassen zum Platzieren</span>
+      </div>
+    );
+  };
+
+  return (
+    <aside
+      id="combined-overview-editor-pane"
+      className="bg-white border border-zinc-200 rounded-xl shadow-xs flex flex-col h-full overflow-hidden"
+    >
+      {/* Panel Header */}
+      <div className="p-3 border-b border-zinc-200 bg-zinc-50/70 flex items-center justify-between shrink-0">
+        <div>
+          <h2 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+            <Sliders className="w-3.5 h-3.5 text-zinc-700" />
+            <span>Übersicht & Editor</span>
+            <span className="text-[11px] font-normal text-zinc-500 normal-case">
+              ({nodes.length} Bausteine)
+            </span>
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setShowMetaSettings(!showMetaSettings)}
+            className={`px-2 py-1 text-[11px] rounded border transition-colors flex items-center gap-1 ${
+              showMetaSettings
+                ? 'bg-zinc-900 text-white border-zinc-900 font-semibold'
+                : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
+            }`}
+            title="E-Mail Betreffzeile und Vorschautext anpassen"
+          >
+            <Mail className="w-3 h-3" />
+            <span>Betreff</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Meta Drawer (Subject & Preheader) */}
+      {showMetaSettings && (
+        <div className="p-3 bg-zinc-50/90 border-b border-zinc-200 space-y-2 text-xs shrink-0">
+          <div>
+            <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+              E-Mail Betreffzeile (Subject)
+            </label>
+            <input
+              type="text"
+              value={meta.subject}
+              onChange={(e) => onUpdateMeta({ ...meta, subject: e.target.value })}
+              className="w-full px-2.5 py-1.5 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              placeholder="Betreff eingeben..."
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+              Preheader (Vorschautext im Posteingang)
+            </label>
+            <input
+              type="text"
+              value={meta.preheader}
+              onChange={(e) => onUpdateMeta({ ...meta, preheader: e.target.value })}
+              className="w-full px-2.5 py-1.5 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              placeholder="Vorschautext eingeben..."
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Sequence of Nodes (Scrollable list with inline accordion editor) */}
+      <div
+        onDragLeave={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          if (
+            e.clientX <= rect.left ||
+            e.clientX >= rect.right ||
+            e.clientY <= rect.top ||
+            e.clientY >= rect.bottom
+          ) {
+            setActiveDropIndex(null);
+          }
+        }}
+        className="flex-1 overflow-y-auto p-2 space-y-2"
+      >
+        {/* Drop zone at the top (before first node) */}
+        {nodes.length > 0 && renderDropZone(0)}
+
+        {nodes.map((node, index) => {
+          const isSelected = selectedNodeId === node.id;
+          const info = getNodeInfo(node.type);
+
+          return (
+            <React.Fragment key={node.id}>
+              <div
+                id={`overview-node-${node.id}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.dataTransfer.dropEffect = 'copy';
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const midY = rect.top + rect.height / 2;
+                  const targetIdx = e.clientY < midY ? index : index + 1;
+                  if (activeDropIndex !== targetIdx) {
+                    setActiveDropIndex(targetIdx);
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const midY = rect.top + rect.height / 2;
+                  const targetIdx = e.clientY < midY ? index : index + 1;
+                  handleDrop(e, targetIdx);
+                }}
+                className={`rounded-lg border transition-all duration-150 overflow-hidden ${
+                  isSelected
+                    ? 'border-zinc-900 bg-white ring-1 ring-zinc-900/10 shadow-xs'
+                    : 'border-zinc-200 bg-white hover:border-zinc-300'
+                } ${draggedNodeIndex === index ? 'opacity-40 scale-[0.99] border-dashed' : ''}`}
+              >
+                {/* Card Header: Drag handle, info, actions */}
+                <div
+                  onClick={() => onSelectNode(isSelected ? null : node.id)}
+                  className={`px-2.5 py-2 flex items-center justify-between gap-1.5 cursor-pointer select-none transition-colors ${
+                    isSelected ? 'bg-zinc-50 border-b border-zinc-200' : 'hover:bg-zinc-50/60'
+                  }`}
+                >
+                  {/* Drag Handle & Position */}
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      draggable
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        handleDragStart(e, index);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedNodeIndex(null);
+                        setActiveDropIndex(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="cursor-grab active:cursor-grabbing p-0.5 text-zinc-400 hover:text-zinc-700"
+                      title="Ziehen zum Neuanordnen"
+                    >
+                      <GripVertical className="w-3.5 h-3.5" />
+                    </span>
+
+                  <span className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold bg-zinc-200/80 text-zinc-800 shrink-0">
+                    {index + 1}
+                  </span>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {info.icon}
+                    <span className="text-xs font-semibold text-zinc-900">
+                      {info.label}
+                    </span>
+                  </div>
+
+                  {!isSelected && (
+                    <span className="text-[11px] text-zinc-500 truncate ml-1">
+                      {getNodeSummary(node)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Right toolbar actions */}
+                <div
+                  className="flex items-center gap-0.5 shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => moveNode(index, 'up')}
+                    className="p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 disabled:opacity-20 disabled:pointer-events-none"
+                    title="Nach oben verschieben"
+                  >
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === nodes.length - 1}
+                    onClick={() => moveNode(index, 'down')}
+                    className="p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 disabled:opacity-20 disabled:pointer-events-none"
+                    title="Nach unten verschieben"
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => duplicateNode(index)}
+                    className="p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200"
+                    title="Duplizieren"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteNode(index)}
+                    className="p-1 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50"
+                    title="Löschen"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectNode(isSelected ? null : node.id)}
+                    className="p-1 rounded text-zinc-500 hover:text-zinc-800"
+                  >
+                    {isSelected ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-zinc-900" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Inline Editor Body (Expanded when selected) */}
+              {isSelected && (
+                <div className="p-3 bg-white space-y-3 text-xs animate-fadeIn">
+                  {/* 1. Title Node */}
+                  {node.type === 'title' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-zinc-700">
+                          Titeltext
+                        </label>
+                        <div className="flex items-center gap-0.5 border border-zinc-200 rounded p-0.5">
+                          {(['left', 'center', 'right'] as const).map((align) => (
+                            <button
+                              key={align}
+                              type="button"
+                              onClick={() => onUpdateNode({ ...node, align })}
+                              className={`p-1 rounded text-xs ${
+                                (node.align || 'left') === align
+                                  ? 'bg-zinc-900 text-white'
+                                  : 'text-zinc-600 hover:bg-zinc-100'
+                              }`}
+                              title={`Ausrichtung: ${align}`}
+                            >
+                              {align === 'left' && <AlignLeft className="w-3 h-3" />}
+                              {align === 'center' && <AlignCenter className="w-3 h-3" />}
+                              {align === 'right' && <AlignRight className="w-3 h-3" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        value={node.text}
+                        onChange={(e) => onUpdateNode({ ...node, text: e.target.value })}
+                        className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none font-semibold text-zinc-900"
+                        placeholder="Titel eingeben..."
+                      />
+                    </div>
+                  )}
+
+                  {/* 2. Heading Node */}
+                  {node.type === 'heading' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-zinc-700">
+                          Überschrift
+                        </label>
+                        <div className="flex items-center gap-0.5 border border-zinc-200 rounded p-0.5">
+                          {(['left', 'center', 'right'] as const).map((align) => (
+                            <button
+                              key={align}
+                              type="button"
+                              onClick={() => onUpdateNode({ ...node, align })}
+                              className={`p-1 rounded text-xs ${
+                                (node.align || 'left') === align
+                                  ? 'bg-zinc-900 text-white'
+                                  : 'text-zinc-600 hover:bg-zinc-100'
+                              }`}
+                            >
+                              {align === 'left' && <AlignLeft className="w-3 h-3" />}
+                              {align === 'center' && <AlignCenter className="w-3 h-3" />}
+                              {align === 'right' && <AlignRight className="w-3 h-3" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        value={node.text}
+                        onChange={(e) => onUpdateNode({ ...node, text: e.target.value })}
+                        className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none font-semibold text-zinc-900"
+                        placeholder="Überschrift eingeben..."
+                      />
+                    </div>
+                  )}
+
+                  {/* 3. Paragraph Node */}
+                  {node.type === 'paragraph' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-zinc-700">
+                          Textabschnitt
+                        </label>
+                        <span className="text-[10px] text-zinc-400">
+                          {node.text.length} Zeichen
+                        </span>
+                      </div>
+                      <textarea
+                        rows={4}
+                        value={node.text}
+                        onChange={(e) => onUpdateNode({ ...node, text: e.target.value })}
+                        className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs leading-relaxed focus:ring-1 focus:ring-zinc-900 focus:outline-none resize-y"
+                        placeholder="Inhalt des Textabschnitts..."
+                      />
+                    </div>
+                  )}
+
+                  {/* 4. Graphic Node */}
+                  {node.type === 'graphic' && (
+                    <div className="space-y-2.5">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                          Bild-URL
+                        </label>
+                        <input
+                          type="url"
+                          value={node.imageUrl}
+                          onChange={(e) => onUpdateNode({ ...node, imageUrl: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                          placeholder="https://..."
+                        />
+                      </div>
+
+                      {/* Quick Sample Image Picker */}
+                      <div>
+                        <span className="block text-[10px] text-zinc-500 mb-1">
+                          Schnellauswahl Beispielbilder:
+                        </span>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {sampleImages.map((img, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => onUpdateNode({ ...node, imageUrl: img.url })}
+                              className="text-[10px] text-left px-2 py-1 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded truncate"
+                            >
+                              {img.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Alt-Text
+                          </label>
+                          <input
+                            type="text"
+                            value={node.altText || ''}
+                            onChange={(e) => onUpdateNode({ ...node, altText: e.target.value })}
+                            className="w-full px-2.5 py-1 border border-zinc-200 rounded-lg text-xs"
+                            placeholder="Beschreibung für Screenreader..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Bildunterschrift
+                          </label>
+                          <input
+                            type="text"
+                            value={node.caption || ''}
+                            onChange={(e) => onUpdateNode({ ...node, caption: e.target.value })}
+                            className="w-full px-2.5 py-1 border border-zinc-200 rounded-lg text-xs"
+                            placeholder="Optionale Legende..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. Bullet List */}
+                  {node.type === 'bullet_list' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-zinc-700">
+                          Aufzählungspunkte (Listenpunkte)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newItems = [...node.items, 'Neuer Aufzählungspunkt'];
+                            onUpdateNode({ ...node, items: newItems });
+                          }}
+                          className="px-2 py-0.5 text-[10px] font-semibold rounded bg-zinc-900 text-white flex items-center gap-1 hover:bg-black"
+                        >
+                          <Plus className="w-2.5 h-2.5" /> Punkt hinzufügen
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {node.items.map((item, itemIdx) => (
+                          <div key={itemIdx} className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-800 shrink-0 ml-1"></span>
+                            <input
+                              type="text"
+                              value={item}
+                              onChange={(e) => {
+                                const newItems = [...node.items];
+                                newItems[itemIdx] = e.target.value;
+                                onUpdateNode({ ...node, items: newItems });
+                              }}
+                              className="flex-1 px-2 py-1 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              disabled={node.items.length <= 1}
+                              onClick={() => {
+                                const newItems = node.items.filter((_, i) => i !== itemIdx);
+                                onUpdateNode({ ...node, items: newItems });
+                              }}
+                              className="p-1 text-zinc-400 hover:text-rose-600 disabled:opacity-20"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 6. Numbered List */}
+                  {node.type === 'numbered_list' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-zinc-700">
+                          Nummerierte Schritte
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newItems = [...node.items, 'Nächster nummerierter Schritt'];
+                            onUpdateNode({ ...node, items: newItems });
+                          }}
+                          className="px-2 py-0.5 text-[10px] font-semibold rounded bg-zinc-900 text-white flex items-center gap-1 hover:bg-black"
+                        >
+                          <Plus className="w-2.5 h-2.5" /> Schritt hinzufügen
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {node.items.map((item, itemIdx) => (
+                          <div key={itemIdx} className="flex items-center gap-1.5">
+                            <span className="w-5 text-[11px] font-bold text-zinc-700 text-right shrink-0">
+                              {itemIdx + 1}.
+                            </span>
+                            <input
+                              type="text"
+                              value={item}
+                              onChange={(e) => {
+                                const newItems = [...node.items];
+                                newItems[itemIdx] = e.target.value;
+                                onUpdateNode({ ...node, items: newItems });
+                              }}
+                              className="flex-1 px-2 py-1 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              disabled={node.items.length <= 1}
+                              onClick={() => {
+                                const newItems = node.items.filter((_, i) => i !== itemIdx);
+                                onUpdateNode({ ...node, items: newItems });
+                              }}
+                              className="p-1 text-zinc-400 hover:text-rose-600 disabled:opacity-20"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 7 & 8. Two Column Left / Right Graphics */}
+                  {(node.type === 'two_col_left_graphic' ||
+                    node.type === 'two_col_right_graphic') && (
+                    <div className="space-y-2.5">
+                      <div className="p-2 bg-zinc-50 rounded-lg border border-zinc-200 text-[11px] text-zinc-600 font-medium">
+                        Layout:{' '}
+                        {node.type === 'two_col_left_graphic'
+                          ? 'Links Grafik • Rechts Überschrift & Text'
+                          : 'Links Überschrift & Text • Rechts Grafik'}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                          Überschrift
+                        </label>
+                        <input
+                          type="text"
+                          value={node.heading}
+                          onChange={(e) => onUpdateNode({ ...node, heading: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                          Textabschnitt
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={node.paragraph}
+                          onChange={(e) => onUpdateNode({ ...node, paragraph: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs leading-relaxed focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                          Grafik URL
+                        </label>
+                        <input
+                          type="url"
+                          value={node.imageUrl}
+                          onChange={(e) => onUpdateNode({ ...node, imageUrl: e.target.value })}
+                          className="w-full px-2.5 py-1 border border-zinc-200 rounded-lg text-xs"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Button-Text (optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={node.buttonText || ''}
+                            onChange={(e) => onUpdateNode({ ...node, buttonText: e.target.value })}
+                            className="w-full px-2.5 py-1 border border-zinc-200 rounded-lg text-xs"
+                            placeholder="z.B. Mehr erfahren"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Button-Link URL
+                          </label>
+                          <input
+                            type="url"
+                            value={node.buttonUrl || ''}
+                            onChange={(e) => onUpdateNode({ ...node, buttonUrl: e.target.value })}
+                            className="w-full px-2.5 py-1 border border-zinc-200 rounded-lg text-xs"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 9. Button CTA */}
+                  {node.type === 'button_cta' && (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Button-Beschriftung
+                          </label>
+                          <input
+                            type="text"
+                            value={node.label}
+                            onChange={(e) => onUpdateNode({ ...node, label: e.target.value })}
+                            className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Ziel-URL
+                          </label>
+                          <input
+                            type="url"
+                            value={node.url}
+                            onChange={(e) => onUpdateNode({ ...node, url: e.target.value })}
+                            className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[11px] text-zinc-500">Ausrichtung:</span>
+                        <div className="flex items-center gap-1 border border-zinc-200 rounded p-0.5">
+                          {(['left', 'center', 'right'] as const).map((align) => (
+                            <button
+                              key={align}
+                              type="button"
+                              onClick={() => onUpdateNode({ ...node, align })}
+                              className={`p-1 rounded text-xs ${
+                                (node.align || 'center') === align
+                                  ? 'bg-zinc-900 text-white'
+                                  : 'text-zinc-600 hover:bg-zinc-100'
+                              }`}
+                            >
+                              {align === 'left' && <AlignLeft className="w-3 h-3" />}
+                              {align === 'center' && <AlignCenter className="w-3 h-3" />}
+                              {align === 'right' && <AlignRight className="w-3 h-3" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Drop zone between nodes (index + 1) */}
+            {index < nodes.length - 1 && renderDropZone(index + 1)}
+          </React.Fragment>
+        );
+      })}
+
+      {/* Drop target at bottom */}
+      {renderDropZone(nodes.length)}
+    </div>
+    </aside>
+  );
+};

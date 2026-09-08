@@ -1,0 +1,6 @@
+{
+  "name": "Company Newsletter Builder",
+  "description": "Visueller Node-basierter Builder für genormte Company Newsletter mit Live-Vorschau und standardisiertem Layout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
