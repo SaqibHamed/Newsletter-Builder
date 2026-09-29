@@ -23,9 +23,13 @@ import {
   ExternalLink,
   Layers,
   ArrowUpDown,
+  Car,
+  Tag,
+  Check,
 } from 'lucide-react';
 import { NewsletterMeta, NewsletterNode, NodeType } from '../types';
 import { createNewNode } from '../utils/nodeFactory';
+import { SYSTEM_TAGS_LIST } from '../utils/autolinaAssets';
 
 interface CombinedOverviewEditorProps {
   nodes: NewsletterNode[];
@@ -75,6 +79,27 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
   const [activeDropIndex, setActiveDropIndex] = useState<number | null>(null);
   const [isWindowDragging, setIsWindowDragging] = useState<boolean>(false);
   const [showMetaSettings, setShowMetaSettings] = useState<boolean>(false);
+  const [showSystemTagsDrawer, setShowSystemTagsDrawer] = useState<boolean>(true);
+  const [copiedTag, setCopiedTag] = useState<string | null>(null);
+
+  const handleInsertTag = (tag: string, targetNodeId?: string) => {
+    const targetId = targetNodeId || selectedNodeId;
+    if (targetId) {
+      const targetNode = nodes.find((n) => n.id === targetId);
+      if (targetNode && 'text' in targetNode) {
+        const current = (targetNode as any).text || '';
+        const updated = current ? `${current} ${tag}` : tag;
+        onUpdateNode({ ...targetNode, text: updated });
+      }
+    }
+    try {
+      navigator.clipboard.writeText(tag);
+      setCopiedTag(tag);
+      setTimeout(() => setCopiedTag(null), 2000);
+    } catch {
+      // Ignore clipboard write restrictions if any
+    }
+  };
 
   // Detect global window drag for smooth drop cells appearance
   useEffect(() => {
@@ -172,6 +197,12 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
           label: 'Button / CTA',
           badge: 'Link',
         };
+      case 'vehicle_card':
+        return {
+          icon: <Car className="w-3.5 h-3.5 text-zinc-900" />,
+          label: 'Fahrzeugkarte',
+          badge: 'Fahrzeug',
+        };
       default:
         return {
           icon: <Layers className="w-3.5 h-3.5 text-zinc-900" />,
@@ -198,6 +229,8 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
         return node.heading || '2 Inhalte nebeneinander';
       case 'button_cta':
         return `Button: "${node.label}"`;
+      case 'vehicle_card':
+        return `${node.brandModel || 'Fahrzeug'} • ${node.price || 'CHF'}`;
       default:
         return '';
     }
@@ -441,6 +474,19 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
+            onClick={() => setShowSystemTagsDrawer(!showSystemTagsDrawer)}
+            className={`px-2 py-1 text-[11px] rounded border transition-colors flex items-center gap-1 ${
+              showSystemTagsDrawer
+                ? 'bg-amber-600 text-white border-amber-600 font-semibold'
+                : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
+            }`}
+            title="Personalisierungs-Tags (%Anrede%, %Nachname%) anzeigen und einfügen"
+          >
+            <Tag className="w-3 h-3" />
+            <span>System-Tags</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setShowMetaSettings(!showMetaSettings)}
             className={`px-2 py-1 text-[11px] rounded border transition-colors flex items-center gap-1 ${
               showMetaSettings
@@ -454,6 +500,45 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
           </button>
         </div>
       </div>
+
+      {/* System-Tags Drawer (%Anrede%, %Nachname%) */}
+      {showSystemTagsDrawer && (
+        <div className="p-3 bg-amber-50/80 border-b border-amber-200 space-y-2 text-xs shrink-0 animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-amber-950 font-semibold text-[11px]">
+              <Tag className="w-3.5 h-3.5 text-amber-700" />
+              <span>System-Tags für E-Mail-Marketing & CRM</span>
+            </div>
+            {copiedTag && (
+              <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                Kopiert: {copiedTag}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-amber-900 leading-normal">
+            Klicken Sie auf einen Tag zum Einfügen oder Kopieren:
+          </p>
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {SYSTEM_TAGS_LIST.map((item) => (
+              <button
+                key={item.tag}
+                type="button"
+                onClick={() => handleInsertTag(item.tag)}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white hover:bg-amber-100 border border-amber-300 text-amber-950 font-mono text-[11px] font-semibold transition-all shadow-2xs hover:shadow-xs active:scale-95"
+                title={`${item.description} (Klicken zum Einfügen/Kopieren)`}
+              >
+                <span>{item.tag}</span>
+                <span className="text-[10px] font-sans font-normal text-amber-700 border-l border-amber-200 pl-1">
+                  {item.label}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="text-[10px] text-amber-800 pt-0.5">
+            <span>Tipp: E-Mail-Systeme ersetzen <strong>%Anrede%</strong> (Frau/Herr) und <strong>%Nachname%</strong> automatisch für jeden Empfänger.</span>
+          </div>
+        </div>
+      )}
 
       {/* Meta Drawer (Subject & Preheader) */}
       {showMetaSettings && (
@@ -699,12 +784,42 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                           ))}
                         </div>
                       </div>
+
+                      {/* Quick Tag Insertion Chips */}
+                      <div className="flex items-center gap-1 text-[10px] flex-wrap">
+                        <span className="text-zinc-400">System-Tags:</span>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Anrede%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Anrede% einfügen"
+                        >
+                          + %Anrede%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Nachname%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Nachname% einfügen"
+                        >
+                          + %Nachname%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Anrede% %Nachname%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 font-mono text-[10px] transition-colors"
+                          title="%Anrede% %Nachname% einfügen"
+                        >
+                          + %Anrede% %Nachname%
+                        </button>
+                      </div>
+
                       <input
                         type="text"
                         value={node.text}
                         onChange={(e) => onUpdateNode({ ...node, text: e.target.value })}
                         className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none font-semibold text-zinc-900"
-                        placeholder="Überschrift eingeben..."
+                        placeholder="Überschrift eingeben (z.B. Guten Tag %Anrede% %Nachname%)..."
                       />
                     </div>
                   )}
@@ -720,6 +835,28 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                           {node.text.length} Zeichen
                         </span>
                       </div>
+
+                      {/* Quick Tag Insertion Chips */}
+                      <div className="flex items-center gap-1 text-[10px] flex-wrap">
+                        <span className="text-zinc-400">System-Tags:</span>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Anrede%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Anrede% einfügen"
+                        >
+                          + %Anrede%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Nachname%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Nachname% einfügen"
+                        >
+                          + %Nachname%
+                        </button>
+                      </div>
+
                       <textarea
                         rows={4}
                         value={node.text}
@@ -1020,6 +1157,91 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                               {align === 'right' && <AlignRight className="w-3 h-3" />}
                             </button>
                           ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 10. Fahrzeugkarte (autolina Style Guide) */}
+                  {node.type === 'vehicle_card' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                          Marke & Modell (H3: 18px Semi Bold)
+                        </label>
+                        <input
+                          type="text"
+                          value={node.brandModel}
+                          onChange={(e) => onUpdateNode({ ...node, brandModel: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                          placeholder="z.B. Porsche Taycan 4S Cross Turismo"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Preis (Schweizer Format)
+                          </label>
+                          <input
+                            type="text"
+                            value={node.price}
+                            onChange={(e) => onUpdateNode({ ...node, price: e.target.value })}
+                            className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                            placeholder="CHF 72'500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Fahrzeug-Bild (URL)
+                          </label>
+                          <input
+                            type="url"
+                            value={node.imageUrl}
+                            onChange={(e) => onUpdateNode({ ...node, imageUrl: e.target.value })}
+                            className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                          Meta-Infos (12px Medium)
+                        </label>
+                        <input
+                          type="text"
+                          value={node.metaInfos}
+                          onChange={(e) => onUpdateNode({ ...node, metaInfos: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                          placeholder="05.2023 • 18'400 km • Automat • Elektro • 530 PS"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Button-Text (optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={node.buttonText || ''}
+                            onChange={(e) => onUpdateNode({ ...node, buttonText: e.target.value })}
+                            className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                            placeholder="Fahrzeugdetails anzeigen"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            Button-Link (URL)
+                          </label>
+                          <input
+                            type="url"
+                            value={node.buttonUrl || ''}
+                            onChange={(e) => onUpdateNode({ ...node, buttonUrl: e.target.value })}
+                            className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                            placeholder="https://www.autolina.ch/..."
+                          />
                         </div>
                       </div>
                     </div>

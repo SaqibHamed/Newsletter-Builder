@@ -48,13 +48,18 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        parsed.backgroundColor = '#E4E4E4';
+        parsed.backgroundColor = '#F6F6F8';
         parsed.cardBackgroundColor = '#FFFFFF';
-        parsed.primaryColor = '#1B4B97';
-        parsed.cardBorderRadius = 12;
-        parsed.logoUrl = 'https://www.autolina.ch/media/logo.64af33af2b4aa46a.svg';
+        parsed.primaryColor = '#2E3E6C';
+        parsed.accentColor = '#08B9C2';
+        parsed.cardBorderRadius = 20;
+        parsed.containerWidth = 600;
+        parsed.logoUrl = '/assets/202506_Logo-Transparent.svg';
         parsed.websiteUrl = 'https://www.autolina.ch';
         parsed.supportEmail = 'service@autolina.ch';
+        parsed.imprintAddress = 'autolina.ch ag • Bahnhofstrasse 24c • 8570 Weinfelden, Schweiz';
+        parsed.showHeader = true;
+        parsed.showFooter = true;
         return parsed;
       } catch (e) {
         console.error('Failed to parse saved company settings', e);
@@ -71,8 +76,14 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isDraggingBrick, setIsDraggingBrick] = useState<boolean>(false);
 
+  // Toggle warning notifications
+  const [warningNotifications, setWarningNotifications] = useState<boolean>(() => {
+    const saved = localStorage.getItem('autolina_warning_notifications');
+    return saved !== null ? saved === 'true' : true;
+  });
+
   // Responsive mobile tab view
-  const [mobileTab, setMobileTab] = useState<'bricks' | 'editor' | 'preview'>('editor');
+  const [mobileTab, setMobileTab] = useState<'bricks' | 'editor' | 'preview'>('preview');
 
   // Persistence
   useEffect(() => {
@@ -99,15 +110,30 @@ export default function App() {
   }, [nodes, selectedNodeId]);
 
   const showToast = (msg: string) => {
+    if (!warningNotifications) return;
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  const handleToggleWarningNotifications = () => {
+    setWarningNotifications((prev) => {
+      const next = !prev;
+      localStorage.setItem('autolina_warning_notifications', String(next));
+      if (next) {
+        setToastMessage('Warnhinweise & Benachrichtigungen aktiviert');
+        setTimeout(() => setToastMessage(null), 2500);
+      } else {
+        setToastMessage(null);
+      }
+      return next;
+    });
   };
 
   const handleCopyHtml = async () => {
     const html = generateEmailHtml(nodes, meta, company);
     await navigator.clipboard.writeText(html);
     setCopied(true);
-    showToast('HTML-Code in Zwischenablage kopiert');
+    showToast('autolina E-Mail HTML in Zwischenablage kopiert');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -136,7 +162,10 @@ export default function App() {
   };
 
   const handleResetToDefault = () => {
-    if (window.confirm('Möchten Sie den Newsletter auf das Standardformat zurücksetzen?')) {
+    const proceed =
+      !warningNotifications ||
+      window.confirm('Möchten Sie die E-Mail auf die Standard-Vorlage zurücksetzen?');
+    if (proceed) {
       const clonedNodes = JSON.parse(JSON.stringify(defaultNodes));
       setNodes(clonedNodes);
       setMeta(JSON.parse(JSON.stringify(defaultNewsletterMeta)));
@@ -189,7 +218,7 @@ export default function App() {
           }`}
         >
           <Eye className="w-3.5 h-3.5" />
-          <span>Vorschau</span>
+          <span>Vorschau (640px)</span>
         </button>
       </div>
 
@@ -244,6 +273,8 @@ export default function App() {
               onReset={handleResetToDefault}
               onCopyHtml={handleCopyHtml}
               copied={copied}
+              warningNotifications={warningNotifications}
+              onToggleWarningNotifications={handleToggleWarningNotifications}
             />
           </div>
         </div>
@@ -252,7 +283,7 @@ export default function App() {
       {/* Floating Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-4 right-4 z-50 bg-zinc-900 text-white text-xs font-medium px-3.5 py-2 rounded-lg shadow-lg flex items-center gap-2 border border-zinc-800 animate-fadeIn">
-          <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+          <CheckCircle className="w-3.5 h-3.5 text-[#08B9C2]" />
           <span>{toastMessage}</span>
         </div>
       )}

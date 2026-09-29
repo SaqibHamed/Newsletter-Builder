@@ -89,9 +89,22 @@ export function createNewNode(type: NodeType): NewsletterNode {
         id,
         type: 'button_cta',
         label: 'Aktion ausführen',
-        url: 'https://unternehmen.ch',
-        align: 'center',
+        url: 'https://www.autolina.ch',
+        align: 'left',
         styleVariant: 'primary',
+      };
+
+    case 'vehicle_card':
+      return {
+        id,
+        type: 'vehicle_card',
+        imageUrl: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=800&q=80',
+        altText: 'Porsche Taycan 4S Cross Turismo',
+        brandModel: 'Porsche Taycan 4S Cross Turismo',
+        price: "CHF 72'500",
+        metaInfos: "05.2023 • 18'400 km • Automat • Elektro • 530 PS",
+        buttonText: 'Fahrzeugdetails anzeigen',
+        buttonUrl: 'https://www.autolina.ch',
       };
 
     default:

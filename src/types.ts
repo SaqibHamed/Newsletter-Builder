@@ -7,7 +7,8 @@ export type NodeType =
   | 'numbered_list'
   | 'two_col_left_graphic'
   | 'two_col_right_graphic'
-  | 'button_cta';
+  | 'button_cta'
+  | 'vehicle_card';
 
 export interface BaseNode {
   id: string;
@@ -80,6 +81,17 @@ export interface ButtonCtaNode extends BaseNode {
   styleVariant?: 'primary' | 'secondary' | 'outline';
 }
 
+export interface VehicleCardNode extends BaseNode {
+  type: 'vehicle_card';
+  imageUrl: string;
+  altText: string;
+  brandModel: string;
+  price: string;
+  metaInfos: string;
+  buttonText?: string;
+  buttonUrl?: string;
+}
+
 export type NewsletterNode =
   | TitleNode
   | HeadingNode
@@ -89,7 +101,8 @@ export type NewsletterNode =
   | NumberedListNode
   | TwoColLeftGraphicNode
   | TwoColRightGraphicNode
-  | ButtonCtaNode;
+  | ButtonCtaNode
+  | VehicleCardNode;
 
 export interface CompanySettings {
   companyName: string;

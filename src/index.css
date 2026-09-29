@@ -2,13 +2,19 @@
 
 @layer base {
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', Arial, Helvetica, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Einheitliche Newsletter CSS Klassen (Div-Container Architektur, 12px Radius, #E4E4E4 Canvas) */
+/* AUTOLINA E-MAIL STYLE GUIDE NORM-KLASSEN */
+/* Layout: 640px Gesamtbreite, 600px Inhaltsbreite, 20px Eckenradius, #F6F6F8 Hintergrund */
+
+.nl-page-bg {
+  background-color: #F6F6F8;
+}
+
 .nl-container {
   width: 600px;
   max-width: 100%;
@@ -19,72 +25,85 @@
   box-sizing: border-box;
 }
 
-.nl-card {
+/* Alle Haupt-Blöcke: Weisser Hintergrund, 20px Radius, kein Schatten, kein Gradient */
+.nl-card,
+.nl-block {
   background-color: #FFFFFF;
-  border-radius: 12px;
+  border-radius: 20px;
   border: 0;
   box-shadow: none;
   overflow: hidden;
   box-sizing: border-box;
 }
 
+/* Block 1: Header (24px Padding) */
+.nl-header-card,
 .nl-logo-card {
-  padding: 20px;
+  padding: 24px;
   text-align: center;
 }
 
-.nl-logo-card img {
-  height: 36px;
-  width: auto;
-  max-width: 100%;
-  display: inline-block;
-  vertical-align: middle;
-}
-
+/* Block 2: Inhalt (32px Padding, 24px innerer Abstand) */
 .nl-content-card {
-  padding: 36px 32px;
+  padding: 32px;
 }
 
 .nl-stack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
+/* Typografie: Inter Google Font */
+/* H1: Inter Semi Bold (600), 28px, 120% */
 .nl-title {
-  font-family: 'Poppins', sans-serif;
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: #000000;
-  margin: 0;
-}
-
-.nl-heading {
-  font-family: 'Poppins', sans-serif;
-  font-size: 17px;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 28px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.2;
   color: #000000;
   margin: 0;
 }
 
+/* H2: Inter Semi Bold (600), 20px, 130% */
+.nl-heading {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #000000;
+  margin: 0;
+}
+
+/* H3: Inter Semi Bold (600), 18px, 130% */
+.nl-subheading {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #000000;
+  margin: 0;
+}
+
+/* Fliesstext: Inter Regular (400), 16px, 150% */
 .nl-paragraph {
-  font-family: 'Inter', sans-serif;
-  font-size: 15px;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 16px;
   font-weight: 400;
-  line-height: 1.6;
+  line-height: 1.5;
   color: #000000;
   margin: 0;
   white-space: pre-line;
 }
 
+/* Bilder: Immer border-radius: 12px */
 .nl-graphic {
   text-align: center;
-  margin: 4px 0;
+  margin: 0;
 }
 
-.nl-graphic img {
+.nl-graphic img,
+.nl-img {
   width: 100%;
   height: auto;
   border-radius: 12px;
@@ -92,18 +111,20 @@
 }
 
 .nl-caption {
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 6px;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #666666;
+  margin-top: 8px;
   text-align: center;
 }
 
+/* 2 Spalten Layout */
 .nl-twocol {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  margin: 6px 0;
+  gap: 20px;
+  margin: 0;
 }
 
 .nl-twocol-reverse {
@@ -111,13 +132,13 @@
 }
 
 .nl-twocol-media {
-  flex: 0 0 42%;
-  max-width: 42%;
+  flex: 0 0 44%;
+  max-width: 44%;
 }
 
 .nl-twocol-media img {
   width: 100%;
-  height: 140px;
+  height: 150px;
   object-fit: cover;
   border-radius: 12px;
   display: block;
@@ -128,77 +149,125 @@
 }
 
 .nl-twocol-body h3 {
-  font-family: 'Poppins', sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.35;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
   color: #000000;
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
 }
 
 .nl-twocol-body p {
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   color: #000000;
   margin: 0;
   white-space: pre-line;
 }
 
+/* Mobile Darstellung Themenblock Bild Links/Rechts:
+   Untereinander: 1. Grafik -> 2. Titel -> 3. Text -> 4. Button */
+.nl-device-mobile .nl-twocol,
+.nl-device-mobile .nl-twocol-reverse,
+.nl-twocol-mobile {
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.nl-device-mobile .nl-twocol-media,
+.nl-twocol-mobile .nl-twocol-media {
+  flex: 0 0 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.nl-device-mobile .nl-twocol-media img,
+.nl-twocol-mobile .nl-twocol-media img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 240px !important;
+  object-fit: cover !important;
+  border-radius: 12px !important;
+}
+
+.nl-device-mobile .nl-twocol-body,
+.nl-twocol-mobile .nl-twocol-body {
+  width: 100% !important;
+  flex: 0 0 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.nl-device-mobile .nl-twocol-body h3,
+.nl-twocol-mobile .nl-twocol-body h3 {
+  order: 1 !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.nl-device-mobile .nl-twocol-body p,
+.nl-twocol-mobile .nl-twocol-body p {
+  order: 2 !important;
+  margin: 0 0 12px 0 !important;
+}
+
+.nl-device-mobile .nl-twocol-body .nl-btn,
+.nl-twocol-mobile .nl-twocol-body .nl-btn {
+  order: 3 !important;
+  margin-top: 4px !important;
+  align-self: flex-start !important;
+}
+
+/* Listen */
 .nl-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-left: 2px;
-  margin: 4px 0;
+  gap: 12px;
+  padding-left: 0;
+  margin: 0;
 }
 
 .nl-list-item {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-family: 'Inter', sans-serif;
-  font-size: 15px;
-  line-height: 1.6;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   color: #000000;
 }
 
 .nl-bullet {
-  color: #1B4B97;
+  color: #2E3E6C;
   font-size: 18px;
-  line-height: 1;
+  line-height: 1.2;
   padding-top: 2px;
   flex-shrink: 0;
 }
 
 .nl-badge-num {
-  background-color: #1B4B97;
-  color: #FFFFFF;
-  font-size: 11px;
+  color: #2E3E6C;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 16px;
   font-weight: 600;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  line-height: 1.5;
   flex-shrink: 0;
-  margin-top: 3px;
 }
 
+/* Buttons: #2E3E6C */
 .nl-btn {
   display: inline-block;
-  background-color: #1B4B97;
+  background-color: #2E3E6C;
   color: #FFFFFF !important;
-  font-family: 'Poppins', sans-serif;
-  font-size: 14px;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.2;
   padding: 12px 24px;
   border-radius: 12px;
-  text-decoration: none;
-  margin-top: 10px;
+  text-decoration: none !important;
+  margin-top: 12px;
   border: 0;
   cursor: pointer;
   text-align: center;
@@ -211,7 +280,7 @@
 }
 
 .nl-btn-wrap {
-  margin: 10px 0;
+  margin: 6px 0;
 }
 
 .nl-btn-center {
@@ -223,73 +292,249 @@
 }
 
 .nl-btn-cta {
-  /* Exakt einheitliche Grösse und einheitlicher Schriftstil für alle Buttons */
-  font-family: 'Poppins', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.3;
-  padding: 12px 24px;
-  border-radius: 12px;
+  padding: 14px 28px;
 }
 
+/* Fahrzeugkarte */
+.nl-vehicle-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E5E8;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.nl-vehicle-media img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.nl-vehicle-body {
+  padding: 20px;
+}
+
+.nl-vehicle-title {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #000000;
+  margin-bottom: 6px;
+}
+
+.nl-vehicle-price {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+.nl-vehicle-meta {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666666;
+  line-height: 1.4;
+}
+
+/* Grussformel am Ende von Block 2 */
 .nl-closing {
-  margin-top: 24px;
+  margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px solid #F4F4F5;
-  font-family: 'Inter', sans-serif;
-  font-size: 15px;
-  line-height: 1.6;
+  border-top: 1px solid #E5E5E8;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   color: #000000;
 }
 
 .nl-closing p {
-  margin-bottom: 12px;
+  margin: 0;
 }
 
-.nl-closing strong {
-  font-family: 'Poppins', sans-serif;
-  font-weight: 600;
+/* Block 3: Footer (32px Padding, 24px innerer Abstand) */
+.nl-footer-card {
+  padding: 32px;
+  text-align: center;
 }
 
-.nl-closing a {
-  color: #1B4B97;
+.nl-footer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+}
+
+.nl-address-block {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000000;
+  text-align: center;
+}
+
+.nl-address-block a {
+  color: #2E3E6C;
+  text-decoration: underline;
+}
+
+.nl-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #E5E5E8;
+  border: 0;
+  margin: 0;
+}
+
+.nl-badges-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.nl-badges-wrap a {
+  display: inline-block;
+  line-height: 0;
   text-decoration: none;
-  font-weight: 500;
 }
 
+.nl-badges-wrap img {
+  height: 40px;
+  width: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+.nl-device-mobile .nl-badges-wrap {
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 10px !important;
+}
+
+.nl-social-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.nl-social-link {
+  color: #000000;
+  text-decoration: none;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 6px;
+}
+
+/* Block 4: Sicherheitshinweis (#1B4B97 Dunkelblau, 24px Padding, 20px Radius) */
 .nl-security-card {
   background-color: #1B4B97;
   color: #FFFFFF;
-  padding: 20px 24px;
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  line-height: 1.6;
+  padding: 24px;
+  border-radius: 20px;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  box-sizing: border-box;
 }
 
 .nl-security-card strong {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
   font-weight: 700;
   color: #FFFFFF;
 }
 
 .nl-security-card a {
-  color: #FFFFFF;
-  text-decoration: underline;
+  color: #FFFFFF !important;
+  text-decoration: underline !important;
   font-weight: 600;
 }
 
-/* Backward compatibility classes */
-.v62_58 {
-  width: 600px;
-  max-width: 100%;
-  background: #E4E4E4;
+/* RESPONSIVE MEDIA QUERIES (Mobile Bildschirme bis 620px) */
+@media only screen and (max-width: 620px) {
+  .nl-container {
+    width: 100% !important;
+  }
+
+  .nl-card {
+    padding: 24px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .nl-header-card {
+    padding: 18px 16px !important;
+  }
+
+  .nl-security-card {
+    padding: 20px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Themenblock Bild Links & Bild Rechts: Auf Mobile untereinander:
+     1. Grafik -> 2. Titel -> 3. Text -> 4. Button */
+  .nl-twocol,
+  .nl-twocol-reverse {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .nl-twocol-media {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+
+  .nl-twocol-media img {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 240px !important;
+    object-fit: cover !important;
+    border-radius: 12px !important;
+  }
+
+  .nl-twocol-body {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .nl-twocol-body h3 {
+    order: 1 !important;
+    margin: 0 0 8px 0 !important;
+  }
+
+  .nl-twocol-body p {
+    order: 2 !important;
+    margin: 0 0 12px 0 !important;
+  }
+
+  .nl-twocol-body .nl-btn {
+    order: 3 !important;
+    margin-top: 4px !important;
+    align-self: flex-start !important;
+  }
+
+  .nl-badges-wrap {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .nl-social-wrap {
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
 }
 
-.v62_60 {
-  width: 600px;
-  max-width: 100%;
-  background: #FFFFFF;
-  border-radius: 12px;
-  border: 0;
-  box-shadow: none;
-}

@@ -18,6 +18,7 @@ import {
   Plus,
   X,
   Sparkles,
+  Car,
 } from 'lucide-react';
 import { NewsletterNode, NodeType } from '../types';
 
@@ -89,6 +90,12 @@ const nodeTypeMeta: Record<
     icon: MousePointerClick,
     color: 'bg-orange-50 text-orange-700 border-orange-200',
     badge: 'Aktions-Button',
+  },
+  vehicle_card: {
+    label: 'Fahrzeugkarte (autolina)',
+    icon: Car,
+    color: 'bg-teal-50 text-teal-700 border-teal-200',
+    badge: 'Fahrzeug',
   },
 };
 
@@ -669,6 +676,62 @@ export const NodeEditorItem: React.FC<NodeEditorItemProps> = ({
                     {align === 'left' ? 'Links' : align === 'center' ? 'Zentriert' : 'Rechts'}
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* 10. VEHICLE CARD */}
+          {node.type === 'vehicle_card' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Marke & Modell
+                </label>
+                <input
+                  type="text"
+                  value={node.brandModel}
+                  onChange={(e) => onUpdate({ ...node, brandModel: e.target.value })}
+                  placeholder="z.B. Porsche Taycan 4S"
+                  className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Preis (Schweizer Format)
+                  </label>
+                  <input
+                    type="text"
+                    value={node.price}
+                    onChange={(e) => onUpdate({ ...node, price: e.target.value })}
+                    placeholder="CHF 72'500"
+                    className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Bild-URL
+                  </label>
+                  <input
+                    type="url"
+                    value={node.imageUrl}
+                    onChange={(e) => onUpdate({ ...node, imageUrl: e.target.value })}
+                    placeholder="https://..."
+                    className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Meta-Infos
+                </label>
+                <input
+                  type="text"
+                  value={node.metaInfos}
+                  onChange={(e) => onUpdate({ ...node, metaInfos: e.target.value })}
+                  placeholder="05.2023 • 18'400 km • Automat • Elektro"
+                  className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg"
+                />
               </div>
             </div>
           )}
