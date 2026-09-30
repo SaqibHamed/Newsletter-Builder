@@ -12,6 +12,7 @@ import {
   Plus,
   Layers,
   Car,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { NodeType } from '../types';
 
@@ -48,8 +49,8 @@ export const availableBricks: BrickDefinition[] = [
   {
     type: 'vehicle_card',
     name: 'Fahrzeugkarte',
-    specs: 'CHF Format • Bild 12px Radius',
-    description: 'Marke, Modell, Preis CHF und Meta-Infos',
+    specs: '6 Spezifikationen • System-Tags',
+    description: 'Marke, Modell, Preis, Datum, KM, PS, Schaltung, Energie, Antrieb',
     icon: Car,
   },
   {
@@ -93,6 +94,13 @@ export const availableBricks: BrickDefinition[] = [
     specs: 'Dunkelblau #2E3E6C • 16px',
     description: 'Hervorgehobener Aktionslink mit 12px Radius',
     icon: MousePointerClick,
+  },
+  {
+    type: 'url',
+    name: 'URL / Link',
+    specs: 'Bold • autolina Dunkelblau #2E3E6C',
+    description: 'Hervorgehobener Textlink oder System-URL (%Reset%)',
+    icon: LinkIcon,
   },
 ];
 

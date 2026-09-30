@@ -8,7 +8,8 @@ export type NodeType =
   | 'two_col_left_graphic'
   | 'two_col_right_graphic'
   | 'button_cta'
-  | 'vehicle_card';
+  | 'vehicle_card'
+  | 'url';
 
 export interface BaseNode {
   id: string;
@@ -85,11 +86,22 @@ export interface VehicleCardNode extends BaseNode {
   type: 'vehicle_card';
   imageUrl: string;
   altText: string;
-  brandModel: string;
-  price: string;
-  metaInfos: string;
-  buttonText?: string;
-  buttonUrl?: string;
+  brand?: string; // z.B. 'Mercedes-Benz' oder '%Marke%'
+  brandModel: string; // z.B. 'AMG GT 63 S E Performance 4MATIC' oder '%Modell%'
+  price: string; // z.B. "CHF 72'500" oder '%Preis%'
+  date?: string; // z.B. '06.2024' oder '%Datum%'
+  mileage?: string; // z.B. "256'984 km" oder '%KM%'
+  power?: string; // z.B. '1296 PS' oder '%PS%'
+  transmission?: string; // z.B. 'Handschaltung' oder '%Schaltung%'
+  fuelType?: string; // z.B. 'Plug-in-Hybrid' oder '%Energie%'
+  driveTrain?: string; // z.B. 'Vorderradantrieb' oder '%Antrieb%'
+}
+
+export interface UrlNode extends BaseNode {
+  type: 'url';
+  url: string;
+  label?: string;
+  align?: 'left' | 'center' | 'right';
 }
 
 export type NewsletterNode =
@@ -102,7 +114,8 @@ export type NewsletterNode =
   | TwoColLeftGraphicNode
   | TwoColRightGraphicNode
   | ButtonCtaNode
-  | VehicleCardNode;
+  | VehicleCardNode
+  | UrlNode;
 
 export interface CompanySettings {
   companyName: string;
@@ -121,6 +134,7 @@ export interface CompanySettings {
   unsubscribeNotice: string;
   showHeader: boolean;
   showFooter: boolean;
+  showSecurityNotice?: boolean;
 }
 
 export interface NewsletterMeta {

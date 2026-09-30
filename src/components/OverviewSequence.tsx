@@ -18,6 +18,7 @@ import {
   ListFilter,
   CheckCircle2,
   Car,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { NewsletterNode, NodeType } from '../types';
 import { createNewNode } from '../utils/nodeFactory';
@@ -33,6 +34,7 @@ const nodeIcons: Record<NodeType, React.ComponentType<{ className?: string }>> =
   two_col_right_graphic: Columns2,
   button_cta: MousePointerClick,
   vehicle_card: Car,
+  url: LinkIcon,
 };
 
 const nodeLabels: Record<NodeType, { title: string }> = {
@@ -46,6 +48,7 @@ const nodeLabels: Record<NodeType, { title: string }> = {
   two_col_right_graphic: { title: '2 Spalten (R-Grafik)' },
   button_cta: { title: 'Button CTA' },
   vehicle_card: { title: 'Fahrzeugkarte' },
+  url: { title: 'URL / Link (Bold Dunkelblau)' },
 };
 
 function getNodeSnippet(node: NewsletterNode): string {
@@ -58,6 +61,8 @@ function getNodeSnippet(node: NewsletterNode): string {
       return node.caption ? `Bild: ${node.caption}` : node.altText ? `Bild: ${node.altText}` : 'Bild ohne Bildunterschrift';
     case 'vehicle_card':
       return `${node.brandModel || 'Fahrzeug'} • ${node.price || 'CHF'}`;
+    case 'url':
+      return `URL: ${node.label || node.url || '%Reset%'}`;
     case 'bullet_list':
     case 'numbered_list':
       return `${node.items.length} Aufzählungspunkte`;

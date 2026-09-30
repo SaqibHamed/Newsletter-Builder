@@ -13,6 +13,10 @@ import {
   Car,
   Tag,
   UserCheck,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { CompanySettings, NewsletterMeta, NewsletterNode, PreviewDevice } from '../types';
 import { sampleTemplates } from '../data/defaultNewsletter';
@@ -28,6 +32,12 @@ import {
   AutolinaLogo,
   AppStoreBadge,
   GooglePlayBadge,
+  VehicleDateIcon,
+  VehicleMileageIcon,
+  VehiclePowerIcon,
+  VehicleTransmissionIcon,
+  VehicleFuelIcon,
+  VehicleDriveIcon,
 } from './AutolinaBrandAssets';
 
 interface NewsletterLivePreviewProps {
@@ -42,6 +52,7 @@ interface NewsletterLivePreviewProps {
   copied?: boolean;
   warningNotifications?: boolean;
   onToggleWarningNotifications?: () => void;
+  onToggleSecurityNotice?: () => void;
 }
 
 export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
@@ -56,6 +67,7 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
   copied = false,
   warningNotifications = true,
   onToggleWarningNotifications,
+  onToggleSecurityNotice,
 }) => {
   const [device, setDevice] = useState<PreviewDevice>('desktop');
   const [zoom, setZoom] = useState<number>(100);
@@ -69,16 +81,28 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
   const containerWidthStyle =
     device === 'mobile' ? '375px' : device === 'tablet' ? '480px' : '600px';
 
-  // Helper zum Rendern von Texten mit %Anrede% und %Nachname%
+  // Helper zum Rendern von Texten mit Personalisierungs- und Fahrzeug-System-Tags
   const renderWithTags = (text?: string): React.ReactNode => {
     if (!text) return '';
     if (tagPreviewMode === 'sample') {
       return text
         .replace(/%Anrede%/g, sampleRecipient.anrede)
-        .replace(/%Nachname%/g, sampleRecipient.nachname);
+        .replace(/%Nachname%/g, sampleRecipient.nachname)
+        .replace(/%Reset%/g, 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo')
+        .replace(/%Marke%/g, 'Mercedes-Benz')
+        .replace(/%Modell%/g, 'AMG GT 63 S E Performance 4MATIC')
+        .replace(/%Preis%/g, "CHF 72'500")
+        .replace(/%Datum%/g, '06.2024')
+        .replace(/%KM%/g, "256'984 km")
+        .replace(/%PS%/g, '1296 PS')
+        .replace(/%Schaltung%/g, 'Handschaltung')
+        .replace(/%Energie%/g, 'Plug-in-Hybrid')
+        .replace(/%Antrieb%/g, 'Vorderradantrieb');
     }
     // 'tags' Modus: Tags werden visuell hervorgehoben dargestellt
-    const parts = text.split(/(%Anrede%|%Nachname%)/g);
+    const parts = text.split(
+      /(%Anrede%|%Nachname%|%Reset%|%Marke%|%Modell%|%Preis%|%Datum%|%KM%|%PS%|%Schaltung%|%Energie%|%Antrieb%)/g
+    );
     if (parts.length === 1) return text;
 
     return parts.map((part, i) => {
@@ -87,7 +111,7 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
           <span
             key={i}
             className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-mono text-[0.88em] border border-amber-300 font-bold mx-0.5 shadow-2xs select-all"
-            title="System-Tag: %Anrede% (Wird vom E-Mail-Marketing-System durch Frau/Herr ersetzt)"
+            title="System-Tag: %Anrede% (Wird vom System durch Frau/Herr ersetzt)"
           >
             %Anrede%
           </span>
@@ -98,9 +122,41 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
           <span
             key={i}
             className="inline-flex items-center px-1.5 py-0.5 rounded bg-sky-100 text-sky-900 font-mono text-[0.88em] border border-sky-300 font-bold mx-0.5 shadow-2xs select-all"
-            title="System-Tag: %Nachname% (Wird vom E-Mail-Marketing-System durch den Nachnamen ersetzt)"
+            title="System-Tag: %Nachname% (Wird vom System durch den Nachnamen ersetzt)"
           >
             %Nachname%
+          </span>
+        );
+      }
+      if (part === '%Reset%') {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-100 text-[#1B3C71] font-mono text-[0.88em] border border-blue-300 font-bold mx-0.5 shadow-2xs select-all"
+            title="System-Tag: %Reset% (Individueller Link zum Passwort-Zurücksetzen / Bestätigen)"
+          >
+            %Reset%
+          </span>
+        );
+      }
+      if (
+        part === '%Marke%' ||
+        part === '%Modell%' ||
+        part === '%Preis%' ||
+        part === '%Datum%' ||
+        part === '%KM%' ||
+        part === '%PS%' ||
+        part === '%Schaltung%' ||
+        part === '%Energie%' ||
+        part === '%Antrieb%'
+      ) {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-100 text-teal-950 font-mono text-[0.85em] border border-teal-300 font-semibold mx-0.5 shadow-2xs select-all"
+            title={`Fahrzeug System-Tag: ${part}`}
+          >
+            {part}
           </span>
         );
       }
@@ -215,8 +271,43 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
           </div>
         </div>
 
-        {/* Right: Toggle Warnings, Zoom & HTML Copy Button */}
+        {/* Right: Toggle Warnings, Security Notice, Zoom & HTML Copy Button */}
         <div className="flex items-center gap-2">
+          {/* Security Notice Toggle ("Vorsicht vor Betrügern...") */}
+          {onToggleSecurityNotice !== undefined && (
+            <div
+              id="security-notice-toggle-container"
+              className="flex items-center gap-1.5 px-2 py-1 bg-white border border-zinc-200 rounded-lg text-xs shadow-2xs select-none"
+              title="Vorsicht vor Betrügern: autolina würde Sie nie nach Ihrem Passwort oder persönlichen Daten fragen... (Klicken zum Ein-/Ausblenden)"
+            >
+              {company.showSecurityNotice !== false ? (
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
+              ) : (
+                <ShieldAlert className="w-3.5 h-3.5 text-zinc-400" />
+              )}
+              <span className="text-[11px] font-medium text-zinc-700 hidden sm:inline">
+                Sicherheitshinweis
+              </span>
+              <button
+                id="toggle-security-notice-btn"
+                type="button"
+                role="switch"
+                aria-checked={company.showSecurityNotice !== false}
+                aria-label="Sicherheitshinweis 'Vorsicht vor Betrügern' aktivieren oder ausblenden"
+                onClick={onToggleSecurityNotice}
+                className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  company.showSecurityNotice !== false ? 'bg-[#1B4B97]' : 'bg-zinc-300'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                    company.showSecurityNotice !== false ? 'translate-x-3' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+
           {/* Warning Notifications Toggle */}
           {onToggleWarningNotifications !== undefined && (
             <div
@@ -588,42 +679,135 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                     );
                   }
 
-                  case 'vehicle_card':
+                  case 'vehicle_card': {
+                    const brand = node.brand || (node.brandModel?.includes(' ') ? node.brandModel.split(' ')[0] : 'Mercedes-Benz');
+                    const model = node.brandModel || '%Modell%';
+                    const price = node.price || "CHF 72'500";
+                    const dateVal = node.date || '06.2024';
+                    const mileageVal = node.mileage || "256'984 km";
+                    const powerVal = node.power || '1296 PS';
+                    const transVal = node.transmission || 'Handschaltung';
+                    const fuelVal = node.fuelType || 'Plug-in-Hybrid';
+                    const driveVal = node.driveTrain || 'Vorderradantrieb';
+
                     return (
                       <div
                         key={node.id}
                         onClick={() => onSelectNode?.(node.id)}
-                        className={`nl-vehicle-card ${interactiveClasses}`}
+                        className={`nl-vehicle-card-v2 p-3.5 sm:p-4 bg-[#F4F4F6] rounded-2xl border border-slate-200/80 transition-all ${interactiveClasses}`}
                       >
-                        <div className="nl-vehicle-media">
+                        {/* 1. Fahrzeug-Bild */}
+                        <div className="w-full overflow-hidden rounded-xl bg-slate-200 aspect-[16/10] max-h-[300px]">
                           <img
                             src={node.imageUrl}
-                            alt={node.altText || node.brandModel}
+                            alt={node.altText || model}
+                            className="w-full h-full object-cover rounded-xl"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src =
-                                'https://placehold.co/600x300/f6f6f8/94a3b8?text=Fahrzeug';
+                                'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80';
                             }}
                           />
                         </div>
-                        <div className="nl-vehicle-body">
-                          <div className="nl-vehicle-title">{renderWithTags(node.brandModel)}</div>
-                          <div className="nl-vehicle-price">{node.price}</div>
-                          <div className="nl-vehicle-meta">{renderWithTags(node.metaInfos)}</div>
-                          {node.buttonText && (
-                            <div className="mt-3">
-                              <a
-                                href={node.buttonUrl || '#'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="nl-btn"
-                              >
-                                {renderWithTags(node.buttonText)}
-                              </a>
-                            </div>
-                          )}
+
+                        {/* 2. Marke, Modell & Preis */}
+                        <div className="mt-3">
+                          <div className="text-xs sm:text-[13px] font-medium text-zinc-500">
+                            {renderWithTags(brand)}
+                          </div>
+                          <h3 className="text-base sm:text-lg font-bold text-zinc-950 leading-snug mt-0.5">
+                            {renderWithTags(model)}
+                          </h3>
+                          <div className="text-xl sm:text-2xl font-bold text-zinc-950 mt-1 mb-3">
+                            {renderWithTags(price)}
+                          </div>
+                        </div>
+
+                        {/* 3. 6 Spezifikationen (2 Zeilen x 3 Spalten) */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {/* Datum */}
+                          <div className="bg-white rounded-xl px-2.5 py-2 flex items-center gap-2 border border-slate-100 shadow-2xs">
+                            <VehicleDateIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span className="text-xs font-medium text-zinc-900 truncate">
+                              {renderWithTags(dateVal)}
+                            </span>
+                          </div>
+
+                          {/* KM */}
+                          <div className="bg-white rounded-xl px-2.5 py-2 flex items-center gap-2 border border-slate-100 shadow-2xs">
+                            <VehicleMileageIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span className="text-xs font-medium text-zinc-900 truncate">
+                              {renderWithTags(mileageVal)}
+                            </span>
+                          </div>
+
+                          {/* PS */}
+                          <div className="bg-white rounded-xl px-2.5 py-2 flex items-center gap-2 border border-slate-100 shadow-2xs">
+                            <VehiclePowerIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span className="text-xs font-medium text-zinc-900 truncate">
+                              {renderWithTags(powerVal)}
+                            </span>
+                          </div>
+
+                          {/* Schaltung */}
+                          <div className="bg-white rounded-xl px-2.5 py-2 flex items-center gap-2 border border-slate-100 shadow-2xs">
+                            <VehicleTransmissionIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span className="text-xs font-medium text-zinc-900 truncate">
+                              {renderWithTags(transVal)}
+                            </span>
+                          </div>
+
+                          {/* Energie */}
+                          <div className="bg-white rounded-xl px-2.5 py-2 flex items-center gap-2 border border-slate-100 shadow-2xs">
+                            <VehicleFuelIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span className="text-xs font-medium text-zinc-900 truncate">
+                              {renderWithTags(fuelVal)}
+                            </span>
+                          </div>
+
+                          {/* Antrieb */}
+                          <div className="bg-white rounded-xl px-2.5 py-2 flex items-center gap-2 border border-slate-100 shadow-2xs">
+                            <VehicleDriveIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span className="text-xs font-medium text-zinc-900 truncate">
+                              {renderWithTags(driveVal)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     );
+                  }
+
+                  case 'url': {
+                    const alignClass =
+                      node.align === 'center'
+                        ? 'text-center'
+                        : node.align === 'right'
+                        ? 'text-right'
+                        : 'text-left';
+                    const displayLabel = node.label || node.url || '%Reset%';
+                    const targetHref =
+                      tagPreviewMode === 'sample' && (node.url === '%Reset%' || !node.url)
+                        ? 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo'
+                        : node.url || '%Reset%';
+
+                    return (
+                      <div
+                        key={node.id}
+                        onClick={() => onSelectNode?.(node.id)}
+                        className={`${interactiveClasses} ${alignClass} py-1.5`}
+                      >
+                        <a
+                          href={targetHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.preventDefault()}
+                          className="font-bold text-[#2E3E6C] underline text-[16px] leading-[150%] hover:text-[#1B3C71] break-all inline-block transition-colors"
+                          title={`URL-Baustein: ${node.url || '%Reset%'}`}
+                        >
+                          {renderWithTags(displayLabel)}
+                        </a>
+                      </div>
+                    );
+                  }
 
                   default:
                     return null;
@@ -730,16 +914,18 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
           </div>
 
           {/* BLOCK 4: SICHERHEITSHINWEIS (Dunkelblau #1B4B97, 24px Padding, 20px Radius) */}
-          <div id="preview-security-blue-box" className="nl-security-card">
-            <p>
-              <strong>Vorsicht vor Betrügern:</strong>{' '}
-              autolina würde Sie nie nach Ihrem Passwort oder persönlichen Daten fragen oder Sie auffordern, diese zu ändern. Sollten Sie eine E-Mail mit einer entsprechenden Aufforderung erhalten, bitten wir Sie, die betreffende E-Mail zu ignorieren und umgehend unseren Support unter{' '}
-              <a href="mailto:service@autolina.ch">
-                service@autolina.ch
-              </a>{' '}
-              zu kontaktieren.
-            </p>
-          </div>
+          {company.showSecurityNotice !== false && (
+            <div id="preview-security-blue-box" className="nl-security-card animate-fadeIn">
+              <p>
+                <strong>Vorsicht vor Betrügern:</strong>{' '}
+                autolina würde Sie nie nach Ihrem Passwort oder persönlichen Daten fragen oder Sie auffordern, diese zu ändern. Sollten Sie eine E-Mail mit einer entsprechenden Aufforderung erhalten, bitten wir Sie, die betreffende E-Mail zu ignorieren und umgehend unseren Support unter{' '}
+                <a href="mailto:service@autolina.ch">
+                  service@autolina.ch
+                </a>{' '}
+                zu kontaktieren.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

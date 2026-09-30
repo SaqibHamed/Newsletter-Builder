@@ -19,6 +19,13 @@ import {
   X,
   Sparkles,
   Car,
+  Tag,
+  Calendar,
+  Gauge,
+  Zap,
+  Fuel,
+  Sliders,
+  RotateCcw,
 } from 'lucide-react';
 import { NewsletterNode, NodeType } from '../types';
 
@@ -96,6 +103,12 @@ const nodeTypeMeta: Record<
     icon: Car,
     color: 'bg-teal-50 text-teal-700 border-teal-200',
     badge: 'Fahrzeug',
+  },
+  url: {
+    label: 'URL / Link',
+    icon: Link,
+    color: 'bg-blue-50 text-[#2E3E6C] border-blue-200',
+    badge: 'Bold Dunkelblau',
   },
 };
 
@@ -682,30 +695,127 @@ export const NodeEditorItem: React.FC<NodeEditorItemProps> = ({
 
           {/* 10. VEHICLE CARD */}
           {node.type === 'vehicle_card' && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Marke & Modell
-                </label>
-                <input
-                  type="text"
-                  value={node.brandModel}
-                  onChange={(e) => onUpdate({ ...node, brandModel: e.target.value })}
-                  placeholder="z.B. Porsche Taycan 4S"
-                  className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg"
-                />
+            <div className="space-y-3.5">
+              {/* Schnell-Aktionen für System-Tags */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-teal-600" />
+                    System-Tags für Vorlagen
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    z.B. Probefahrt, Inserat online
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdate({
+                        ...node,
+                        brand: '%Marke%',
+                        brandModel: '%Modell%',
+                        price: '%Preis%',
+                        date: '%Datum%',
+                        mileage: '%KM%',
+                        power: '%PS%',
+                        transmission: '%Schaltung%',
+                        fuelType: '%Energie%',
+                        driveTrain: '%Antrieb%',
+                      })
+                    }
+                    className="px-2 py-1 text-[11px] font-semibold bg-teal-600 hover:bg-teal-700 text-white rounded shadow-2xs flex items-center gap-1 transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    Alle System-Tags einsetzen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdate({
+                        ...node,
+                        brand: 'Mercedes-Benz',
+                        brandModel: 'AMG GT 63 S E Performance 4MATIC',
+                        price: "CHF 72'500",
+                        date: '06.2024',
+                        mileage: "256'984 km",
+                        power: '1296 PS',
+                        transmission: 'Handschaltung',
+                        fuelType: 'Plug-in-Hybrid',
+                        driveTrain: 'Vorderradantrieb',
+                      })
+                    }
+                    className="px-2 py-1 text-[11px] font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded shadow-2xs flex items-center gap-1 transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3 text-slate-500" />
+                    Beispiel-Daten
+                  </button>
+                </div>
               </div>
+
+              {/* Marke & Modell */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Preis (Schweizer Format)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700">Marke</label>
+                    <button
+                      type="button"
+                      onClick={() => onUpdate({ ...node, brand: '%Marke%' })}
+                      className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                    >
+                      + %Marke%
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={node.brand || ''}
+                    onChange={(e) => onUpdate({ ...node, brand: e.target.value })}
+                    placeholder="Mercedes-Benz oder %Marke%"
+                    className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700">Modell</label>
+                    <button
+                      type="button"
+                      onClick={() => onUpdate({ ...node, brandModel: '%Modell%' })}
+                      className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                    >
+                      + %Modell%
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={node.brandModel}
+                    onChange={(e) => onUpdate({ ...node, brandModel: e.target.value })}
+                    placeholder="AMG GT 63 S oder %Modell%"
+                    className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Preis & Bild-URL */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Preis (CHF)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => onUpdate({ ...node, price: '%Preis%' })}
+                      className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                    >
+                      + %Preis%
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={node.price}
                     onChange={(e) => onUpdate({ ...node, price: e.target.value })}
-                    placeholder="CHF 72'500"
-                    className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg"
+                    placeholder="CHF 72'500 oder %Preis%"
+                    className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg font-semibold"
                   />
                 </div>
                 <div>
@@ -721,15 +831,184 @@ export const NodeEditorItem: React.FC<NodeEditorItemProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Gliederung der Infos: 6 Spezifikationen gemäss Vorgabe */}
+              <div className="pt-2 border-t border-slate-100">
+                <label className="block text-xs font-semibold text-slate-800 mb-2">
+                  Fahrzeug-Spezifikationen (Datum, KM, PS, Schaltung, Energie, Antrieb)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* 1. Datum */}
+                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-slate-500" />
+                        Datum
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ ...node, date: '%Datum%' })}
+                        className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                      >
+                        + %Datum%
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={node.date || ''}
+                      onChange={(e) => onUpdate({ ...node, date: e.target.value })}
+                      placeholder="06.2024 oder %Datum%"
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs"
+                    />
+                  </div>
+
+                  {/* 2. KM */}
+                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+                        <Gauge className="w-3 h-3 text-slate-500" />
+                        KM
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ ...node, mileage: '%KM%' })}
+                        className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                      >
+                        + %KM%
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={node.mileage || ''}
+                      onChange={(e) => onUpdate({ ...node, mileage: e.target.value })}
+                      placeholder="256'984 km oder %KM%"
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs"
+                    />
+                  </div>
+
+                  {/* 3. PS */}
+                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-slate-500" />
+                        PS
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ ...node, power: '%PS%' })}
+                        className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                      >
+                        + %PS%
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={node.power || ''}
+                      onChange={(e) => onUpdate({ ...node, power: e.target.value })}
+                      placeholder="1296 PS oder %PS%"
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs"
+                    />
+                  </div>
+
+                  {/* 4. Schaltung */}
+                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+                        <Sliders className="w-3 h-3 text-slate-500" />
+                        Schaltung
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ ...node, transmission: '%Schaltung%' })}
+                        className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                      >
+                        + %Schaltung%
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={node.transmission || ''}
+                      onChange={(e) => onUpdate({ ...node, transmission: e.target.value })}
+                      placeholder="Handschaltung oder %Schaltung%"
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs"
+                    />
+                  </div>
+
+                  {/* 5. Energie */}
+                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+                        <Fuel className="w-3 h-3 text-slate-500" />
+                        Energie
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ ...node, fuelType: '%Energie%' })}
+                        className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                      >
+                        + %Energie%
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={node.fuelType || ''}
+                      onChange={(e) => onUpdate({ ...node, fuelType: e.target.value })}
+                      placeholder="Plug-in-Hybrid oder %Energie%"
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs"
+                    />
+                  </div>
+
+                  {/* 6. Antrieb */}
+                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+                        <Car className="w-3 h-3 text-slate-500" />
+                        Antrieb
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onUpdate({ ...node, driveTrain: '%Antrieb%' })}
+                        className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                      >
+                        + %Antrieb%
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={node.driveTrain || ''}
+                      onChange={(e) => onUpdate({ ...node, driveTrain: e.target.value })}
+                      placeholder="Vorderradantrieb oder %Antrieb%"
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {node.type === 'url' && (
+            <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Meta-Infos
+                  Link-Text
                 </label>
                 <input
                   type="text"
-                  value={node.metaInfos}
-                  onChange={(e) => onUpdate({ ...node, metaInfos: e.target.value })}
-                  placeholder="05.2023 • 18'400 km • Automat • Elektro"
+                  value={node.label !== undefined ? node.label : node.url}
+                  onChange={(e) => onUpdate({ ...node, label: e.target.value })}
+                  placeholder="%Reset% oder individueller Text"
+                  className="w-full px-3 py-1.5 text-xs text-[#2E3E6C] font-bold bg-white border border-slate-200 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Ziel-URL
+                </label>
+                <input
+                  type="text"
+                  value={node.url}
+                  onChange={(e) => onUpdate({ ...node, url: e.target.value })}
+                  placeholder="%Reset% oder https://..."
                   className="w-full px-3 py-1.5 text-xs text-slate-800 bg-white border border-slate-200 rounded-lg"
                 />
               </div>

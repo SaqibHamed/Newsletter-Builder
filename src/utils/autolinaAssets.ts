@@ -33,9 +33,20 @@ export const AUTOLINA_COLORS = {
 export const SYSTEM_TAGS = {
   anrede: '%Anrede%',
   nachname: '%Nachname%',
+  reset: '%Reset%',
   greetingCombined: '%Anrede% %Nachname%',
   greetingFull: 'Guten Tag %Anrede% %Nachname%,',
   vorname: '%Vorname%',
+  // Fahrzeug System-Tags gemäss autolina Standard
+  marke: '%Marke%',
+  modell: '%Modell%',
+  preis: '%Preis%',
+  datum: '%Datum%',
+  km: '%KM%',
+  ps: '%PS%',
+  schaltung: '%Schaltung%',
+  energie: '%Energie%',
+  antrieb: '%Antrieb%',
 } as const;
 
 export const SYSTEM_TAGS_LIST = [
@@ -52,6 +63,66 @@ export const SYSTEM_TAGS_LIST = [
     example: 'Muster',
   },
   {
+    tag: '%Reset%',
+    label: 'URL-Tag %Reset%',
+    description: 'Generiert den individuellen Sicherheitslink für Passwörter oder Bestätigungen',
+    example: 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo',
+  },
+  {
+    tag: '%Marke%',
+    label: 'Marke',
+    description: 'Fahrzeug-Hersteller/Marke',
+    example: 'Mercedes-Benz',
+  },
+  {
+    tag: '%Modell%',
+    label: 'Modell',
+    description: 'Fahrzeug-Modellbezeichnung',
+    example: 'AMG GT 63 S E Performance 4MATIC',
+  },
+  {
+    tag: '%Preis%',
+    label: 'Preis',
+    description: 'Verkaufspreis im Schweizer Format',
+    example: "CHF 72'500",
+  },
+  {
+    tag: '%Datum%',
+    label: 'Datum / Jahr',
+    description: '1. Inverkehrssetzung / Erstzulassung',
+    example: '06.2024',
+  },
+  {
+    tag: '%KM%',
+    label: 'Kilometerstand',
+    description: 'Laufleistung mit km Einheit',
+    example: "256'984 km",
+  },
+  {
+    tag: '%PS%',
+    label: 'Leistung PS',
+    description: 'Motorleistung in Pferdestärken',
+    example: '1296 PS',
+  },
+  {
+    tag: '%Schaltung%',
+    label: 'Schaltung',
+    description: 'Getriebeart (Handschaltung, Automat)',
+    example: 'Handschaltung',
+  },
+  {
+    tag: '%Energie%',
+    label: 'Energie',
+    description: 'Treibstoffart (Plug-in-Hybrid, Benzin, Elektro)',
+    example: 'Plug-in-Hybrid',
+  },
+  {
+    tag: '%Antrieb%',
+    label: 'Antrieb',
+    description: 'Antriebsart (Vorderradantrieb, Allrad, Hinterradantrieb)',
+    example: 'Vorderradantrieb',
+  },
+  {
     tag: '%Anrede% %Nachname%',
     label: 'Anrede + Nachname',
     description: 'Kombination für die persönliche Begrüssung',
@@ -65,22 +136,72 @@ export const SYSTEM_TAGS_LIST = [
   },
 ];
 
+export interface SampleVehicleValues {
+  marke?: string;
+  modell?: string;
+  preis?: string;
+  datum?: string;
+  km?: string;
+  ps?: string;
+  schaltung?: string;
+  energie?: string;
+  antrieb?: string;
+}
+
+export const DEFAULT_SAMPLE_VEHICLE: SampleVehicleValues = {
+  marke: 'Mercedes-Benz',
+  modell: 'AMG GT 63 S E Performance 4MATIC',
+  preis: "CHF 72'500",
+  datum: '06.2024',
+  km: "256'984 km",
+  ps: '1296 PS',
+  schaltung: 'Handschaltung',
+  energie: 'Plug-in-Hybrid',
+  antrieb: 'Vorderradantrieb',
+};
+
 /**
  * Ersetzt System-Tags mit Beispiel-Werten für die realistische Vorschau
  */
 export function replaceSystemTags(
   text: string,
-  sampleValues: { anrede?: string; nachname?: string; vorname?: string } = {
+  sampleValues: {
+    anrede?: string;
+    nachname?: string;
+    vorname?: string;
+    reset?: string;
+    marke?: string;
+    modell?: string;
+    preis?: string;
+    datum?: string;
+    km?: string;
+    ps?: string;
+    schaltung?: string;
+    energie?: string;
+    antrieb?: string;
+  } = {
     anrede: 'Herr',
     nachname: 'Muster',
     vorname: 'Max',
+    reset: 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo-xyz',
+    ...DEFAULT_SAMPLE_VEHICLE,
   }
 ): string {
   if (!text) return '';
   return text
     .replace(/%Anrede%/g, sampleValues.anrede || 'Herr')
     .replace(/%Nachname%/g, sampleValues.nachname || 'Muster')
-    .replace(/%Vorname%/g, sampleValues.vorname || 'Max');
+    .replace(/%Vorname%/g, sampleValues.vorname || 'Max')
+    .replace(/%Reset%/g, sampleValues.reset || 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo-xyz')
+    .replace(/%Marke%/g, sampleValues.marke || DEFAULT_SAMPLE_VEHICLE.marke!)
+    .replace(/%Modell%/g, sampleValues.modell || DEFAULT_SAMPLE_VEHICLE.modell!)
+    .replace(/%Preis%/g, sampleValues.preis || DEFAULT_SAMPLE_VEHICLE.preis!)
+    .replace(/%Datum%/g, sampleValues.datum || DEFAULT_SAMPLE_VEHICLE.datum!)
+    .replace(/%KM%/g, sampleValues.km || DEFAULT_SAMPLE_VEHICLE.km!)
+    .replace(/%PS%/g, sampleValues.ps || DEFAULT_SAMPLE_VEHICLE.ps!)
+    .replace(/%Schaltung%/g, sampleValues.schaltung || DEFAULT_SAMPLE_VEHICLE.schaltung!)
+    .replace(/%Energie%/g, sampleValues.energie || DEFAULT_SAMPLE_VEHICLE.energie!)
+    .replace(/%Antrieb%/g, sampleValues.antrieb || DEFAULT_SAMPLE_VEHICLE.antrieb!);
 }
 
 // Statische URLs zu den Original-Dateien im /public/assets Ordner
@@ -239,7 +360,25 @@ export function getSocialMediaLinksHtml(): string {
   return links
     .map(
       (link) =>
-        `<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="nl-social-link" style="color:#000000;text-decoration:none;font-family:'Inter', Arial, sans-serif;font-size:13px;font-weight:500;display:inline-flex;align-items:center;padding:4px 8px;border-radius:6px;transition:opacity 0.15s ease;">${link.iconSvg}<span>${link.name}</span></a>`
+        `<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="nl-social-link" style="color:#000000;text-decoration:none;font-family:'Inter', Arial, sans-serif;font-size:13px;font-weight:500;display:inline-flex;align-items:center;padding:4px 8px;margin:2px 4px;border-radius:6px;transition:opacity 0.15s ease;">${link.iconSvg}<span>${link.name}</span></a>`
     )
-    .join('\n        <span class="nl-social-divider" style="color:#E5E5E8;margin:0 4px;">•</span>\n        ');
+    .join('\n        ');
+}
+
+// 6 Fahrzeug-Spezifikations-Icons als Inline-SVG für HTML-E-Mails
+export function getVehicleSpecIconSvg(type: 'date' | 'mileage' | 'power' | 'transmission' | 'fuel' | 'drive'): string {
+  switch (type) {
+    case 'date':
+      return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><rect x="3" y="4" width="18" height="18" rx="4" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>`;
+    case 'mileage':
+      return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" /><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" /><path d="m13.4 10.6 3.6-3.6" /></svg>`;
+    case 'power':
+      return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><path d="M6 20c1.5-2 3-4 4-6 0-3 1-6 3-8 1-1 3-2 5-1-1 2-1 4-1 6 2-1 4 0 4 2-1 1-3 2-4 3 0 2-1 4-2 6" /><circle cx="16" cy="7" r="1" fill="#71717A" /></svg>`;
+    case 'transmission':
+      return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="5" /><path d="M8 8v8M16 8v8M8 12h8" /><circle cx="8" cy="8" r="1.2" fill="#71717A" /><circle cx="16" cy="8" r="1.2" fill="#71717A" /><circle cx="8" cy="16" r="1.2" fill="#71717A" /><circle cx="16" cy="16" r="1.2" fill="#71717A" /></svg>`;
+    case 'fuel':
+      return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><path d="M3 22h12M4 9h10M4 22V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v18" /><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L19.5 6.5" /></svg>`;
+    case 'drive':
+      return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><rect x="3" y="4" width="4" height="6" rx="1.5" /><rect x="17" y="4" width="4" height="6" rx="1.5" /><rect x="3" y="14" width="4" height="6" rx="1.5" /><rect x="17" y="14" width="4" height="6" rx="1.5" /><line x1="7" y1="7" x2="17" y2="7" /><line x1="7" y1="17" x2="17" y2="17" /><line x1="12" y1="7" x2="12" y2="17" /><circle cx="12" cy="12" r="1.5" fill="#71717A" /></svg>`;
+  }
 }

@@ -384,3 +384,153 @@ export const AppStoreBadge: React.FC<BrandAssetProps> = ({
     </svg>
   );
 };
+
+interface SpecIconProps {
+  className?: string;
+  size?: number;
+}
+
+/**
+ * 1. Datum Icon (Kalender)
+ */
+export const VehicleDateIcon: React.FC<SpecIconProps> = ({ className = 'w-3.5 h-3.5 text-zinc-500', size = 15 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    role="img"
+    aria-label="Datum"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="4" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
+/**
+ * 2. Kilometer Icon (Tacho / Speedometer)
+ */
+export const VehicleMileageIcon: React.FC<SpecIconProps> = ({ className = 'w-3.5 h-3.5 text-zinc-500', size = 15 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    role="img"
+    aria-label="Kilometerstand"
+  >
+    <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
+    <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+    <path d="m13.4 10.6 3.6-3.6" />
+  </svg>
+);
+
+/**
+ * 3. PS Icon (Pferdestärke / Power Horsehead)
+ */
+export const VehiclePowerIcon: React.FC<SpecIconProps> = ({ className = 'w-3.5 h-3.5 text-zinc-500', size = 15 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    role="img"
+    aria-label="Leistung PS"
+  >
+    <path d="M6 20c1.5-2 3-4 4-6 0-3 1-6 3-8 1-1 3-2 5-1-1 2-1 4-1 6 2-1 4 0 4 2-1 1-3 2-4 3 0 2-1 4-2 6" />
+    <circle cx="16" cy="7" r="1" fill="currentColor" />
+  </svg>
+);
+
+/**
+ * 4. Schaltung Icon (Schaltkulisse / Getriebe)
+ */
+export const VehicleTransmissionIcon: React.FC<SpecIconProps> = ({ className = 'w-3.5 h-3.5 text-zinc-500', size = 15 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    role="img"
+    aria-label="Schaltung"
+  >
+    <rect x="3" y="3" width="18" height="18" rx="5" />
+    <path d="M8 8v8M16 8v8M8 12h8" />
+    <circle cx="8" cy="8" r="1.2" fill="currentColor" />
+    <circle cx="16" cy="8" r="1.2" fill="currentColor" />
+    <circle cx="8" cy="16" r="1.2" fill="currentColor" />
+    <circle cx="16" cy="16" r="1.2" fill="currentColor" />
+  </svg>
+);
+
+/**
+ * 5. Energie Icon (Zapfsäule / Kraftstoff)
+ */
+export const VehicleFuelIcon: React.FC<SpecIconProps> = ({ className = 'w-3.5 h-3.5 text-zinc-500', size = 15 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    role="img"
+    aria-label="Treibstoff / Energie"
+  >
+    <path d="M3 22h12M4 9h10M4 22V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v18" />
+    <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L19.5 6.5" />
+  </svg>
+);
+
+/**
+ * 6. Antrieb Icon (Achsen / 4x4 Drivetrain)
+ */
+export const VehicleDriveIcon: React.FC<SpecIconProps> = ({ className = 'w-3.5 h-3.5 text-zinc-500', size = 15 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    role="img"
+    aria-label="Antrieb"
+  >
+    <rect x="3" y="4" width="4" height="6" rx="1.5" />
+    <rect x="17" y="4" width="4" height="6" rx="1.5" />
+    <rect x="3" y="14" width="4" height="6" rx="1.5" />
+    <rect x="17" y="14" width="4" height="6" rx="1.5" />
+    <line x1="7" y1="7" x2="17" y2="7" />
+    <line x1="7" y1="17" x2="17" y2="17" />
+    <line x1="12" y1="7" x2="12" y2="17" />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+  </svg>
+);

@@ -7,6 +7,7 @@ import {
   getAppleBadgeSvgLink,
   getGooglePlayBadgeSvgLink,
   getSocialMediaLinksHtml,
+  getVehicleSpecIconSvg,
 } from './autolinaAssets';
 
 export function generateEmailHtml(
@@ -132,21 +133,63 @@ export function generateEmailHtml(
       }
 
       case 'vehicle_card': {
-        const btnHtml = node.buttonText
-          ? `\n            <div style="margin-top:14px;"><a href="${escapeAttr(
-              node.buttonUrl || '#'
-            )}" class="nl-btn">${escapeHtml(node.buttonText)}</a></div>`
-          : '';
+        const brand = node.brand || (node.brandModel?.includes(' ') ? node.brandModel.split(' ')[0] : 'Mercedes-Benz');
+        const model = node.brandModel || '%Modell%';
+        const price = node.price || "CHF 72'500";
+        const dateVal = node.date || '06.2024';
+        const mileageVal = node.mileage || "256'984 km";
+        const powerVal = node.power || '1296 PS';
+        const transVal = node.transmission || 'Handschaltung';
+        const fuelVal = node.fuelType || 'Plug-in-Hybrid';
+        const driveVal = node.driveTrain || 'Vorderradantrieb';
 
-        return `        <div class="nl-vehicle-card">
-          <div class="nl-vehicle-media">
-            <img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || node.brandModel)}" />
+        return `        <div class="nl-vehicle-card-v2">
+          <div class="nl-vehicle-media-v2">
+            <img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || model)}" />
           </div>
-          <div class="nl-vehicle-body">
-            <div class="nl-vehicle-title">${escapeHtml(node.brandModel)}</div>
-            <div class="nl-vehicle-price">${escapeHtml(node.price)}</div>
-            <div class="nl-vehicle-meta">${escapeHtml(node.metaInfos)}</div>${btnHtml}
+          <div class="nl-vehicle-body-v2">
+            <div class="nl-vehicle-brand">${escapeHtml(replacePersonalization(brand))}</div>
+            <div class="nl-vehicle-title-v2">${escapeHtml(replacePersonalization(model))}</div>
+            <div class="nl-vehicle-price-v2">${escapeHtml(replacePersonalization(price))}</div>
+
+            <!-- 6 Spezifikationen (2 Zeilen x 3 Spalten) -->
+            <div class="nl-vehicle-specs-grid">
+              <div class="nl-spec-pill">
+                ${getVehicleSpecIconSvg('date')}
+                <span>${escapeHtml(replacePersonalization(dateVal))}</span>
+              </div>
+              <div class="nl-spec-pill">
+                ${getVehicleSpecIconSvg('mileage')}
+                <span>${escapeHtml(replacePersonalization(mileageVal))}</span>
+              </div>
+              <div class="nl-spec-pill">
+                ${getVehicleSpecIconSvg('power')}
+                <span>${escapeHtml(replacePersonalization(powerVal))}</span>
+              </div>
+              <div class="nl-spec-pill">
+                ${getVehicleSpecIconSvg('transmission')}
+                <span>${escapeHtml(replacePersonalization(transVal))}</span>
+              </div>
+              <div class="nl-spec-pill">
+                ${getVehicleSpecIconSvg('fuel')}
+                <span>${escapeHtml(replacePersonalization(fuelVal))}</span>
+              </div>
+              <div class="nl-spec-pill">
+                ${getVehicleSpecIconSvg('drive')}
+                <span>${escapeHtml(replacePersonalization(driveVal))}</span>
+              </div>
+            </div>
           </div>
+        </div>`;
+      }
+
+      case 'url': {
+        const alignClass =
+          node.align === 'center' ? ' text-center' : node.align === 'right' ? ' text-right' : '';
+        const displayLabel = node.label || node.url || '%Reset%';
+        const targetUrl = node.url || '%Reset%';
+        return `        <div class="nl-url-wrap${alignClass}">
+          <a href="${escapeAttr(targetUrl)}" target="_blank" rel="noopener noreferrer" class="nl-url-link">${escapeHtml(replacePersonalization(displayLabel))}</a>
         </div>`;
       }
 
@@ -428,6 +471,91 @@ export function generateEmailHtml(
       padding: 14px 28px;
     }
 
+    /* URL / Link Baustein: Bold und autolina Dunkelblau #2E3E6C */
+    .nl-url-wrap {
+      margin: 4px 0;
+    }
+
+    .nl-url-link {
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
+      font-size: 16px;
+      font-weight: 700 !important;
+      line-height: 150%;
+      color: #2E3E6C !important;
+      text-decoration: underline !important;
+      word-break: break-all;
+    }
+
+    /* Fahrzeugkarte v2 gemäss aktuellem autolina Design (grafik.png) */
+    .nl-vehicle-card-v2 {
+      background-color: #F4F4F6;
+      border: 1px solid #E5E5E8;
+      border-radius: 16px;
+      overflow: hidden;
+      padding: 16px;
+      margin: 6px 0;
+    }
+
+    .nl-vehicle-media-v2 img {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      display: block;
+      border-radius: 12px;
+    }
+
+    .nl-vehicle-body-v2 {
+      padding-top: 14px;
+    }
+
+    .nl-vehicle-brand {
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #71717A;
+      margin-bottom: 2px;
+    }
+
+    .nl-vehicle-title-v2 {
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 130%;
+      color: #09090B;
+      margin-bottom: 4px;
+    }
+
+    .nl-vehicle-price-v2 {
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 120%;
+      color: #09090B;
+      margin-bottom: 12px;
+    }
+
+    .nl-vehicle-specs-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .nl-spec-pill {
+      background-color: #FFFFFF;
+      border: 1px solid #E4E4E7;
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: inline-flex;
+      align-items: center;
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: #18181B;
+      box-sizing: border-box;
+      flex: 1 1 calc(33.333% - 8px);
+      min-width: 130px;
+    }
+
     /* Fahrzeugkarte laut Style Guide (Probefahrt & Inserate) */
     .nl-vehicle-card {
       background-color: #FFFFFF;
@@ -687,6 +815,17 @@ export function generateEmailHtml(
       .nl-vehicle-price {
         font-size: 24px !important;
       }
+
+      .nl-vehicle-media-v2 img {
+        height: 190px !important;
+      }
+
+      .nl-spec-pill {
+        flex: 1 1 calc(50% - 6px) !important;
+        min-width: 110px !important;
+        padding: 6px 8px !important;
+        font-size: 11px !important;
+      }
     }
   </style>
 </head>
@@ -756,10 +895,14 @@ ${renderedContent}
         </div>
       </div>
 
-      <!-- BLOCK 4: SICHERHEITSHINWEIS (Dunkelblau #1B4B97, 24px Padding, 20px Radius) -->
+      ${
+        company.showSecurityNotice !== false
+          ? `<!-- BLOCK 4: SICHERHEITSHINWEIS (Dunkelblau #1B4B97, 24px Padding, 20px Radius) -->
       <div class="nl-security-block">
         <p><strong>Vorsicht vor Betrügern:</strong> autolina würde Sie nie nach Ihrem Passwort oder persönlichen Daten fragen oder Sie auffordern, diese zu ändern. Sollten Sie eine E-Mail mit einer entsprechenden Aufforderung erhalten, bitten wir Sie, die betreffende E-Mail zu ignorieren und umgehend unseren Support unter <a href="mailto:service@autolina.ch">service@autolina.ch</a> zu kontaktieren.</p>
-      </div>
+      </div>`
+          : ''
+      }
 
     </div>
   </div>

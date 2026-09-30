@@ -129,6 +129,21 @@ export default function App() {
     });
   };
 
+  const handleToggleSecurityNotice = () => {
+    setCompany((prev) => {
+      const nextVal = prev.showSecurityNotice === false ? true : false;
+      showToast(
+        nextVal
+          ? 'Sicherheitshinweis "Vorsicht vor Betrügern" eingeblendet'
+          : 'Sicherheitshinweis "Vorsicht vor Betrügern" ausgeblendet'
+      );
+      return {
+        ...prev,
+        showSecurityNotice: nextVal,
+      };
+    });
+  };
+
   const handleCopyHtml = async () => {
     const html = generateEmailHtml(nodes, meta, company);
     await navigator.clipboard.writeText(html);
@@ -251,6 +266,8 @@ export default function App() {
               onUpdateNodes={setNodes}
               meta={meta}
               onUpdateMeta={setMeta}
+              company={company}
+              onToggleSecurityNotice={handleToggleSecurityNotice}
               primaryColor={company.primaryColor}
               onResetNodes={handleResetToDefault}
               isDraggingExternal={isDraggingBrick}
@@ -275,6 +292,7 @@ export default function App() {
               copied={copied}
               warningNotifications={warningNotifications}
               onToggleWarningNotifications={handleToggleWarningNotifications}
+              onToggleSecurityNotice={handleToggleSecurityNotice}
             />
           </div>
         </div>
