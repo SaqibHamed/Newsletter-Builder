@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   GripVertical,
   ChevronDown,
   ChevronRight,
   ChevronUp,
+  ArrowUp,
+  ArrowDown,
   Trash2,
   Copy,
   Plus,
@@ -38,7 +40,7 @@ import {
 } from 'lucide-react';
 import { CompanySettings, NewsletterMeta, NewsletterNode, NodeType } from '../types';
 import { createNewNode } from '../utils/nodeFactory';
-import { SYSTEM_TAGS_LIST } from '../utils/autolinaAssets';
+import { SYSTEM_TAGS_LIST, formatPlaceholderTag, isPlaceholderGraphic } from '../utils/autolinaAssets';
 
 interface CombinedOverviewEditorProps {
   nodes: NewsletterNode[];
@@ -53,6 +55,7 @@ interface CombinedOverviewEditorProps {
   primaryColor?: string;
   onResetNodes?: () => void;
   isDraggingExternal?: boolean;
+  draggedBrickType?: NodeType | null;
 }
 
 const sampleImages = [
@@ -87,8 +90,10 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
   primaryColor = '#18181b',
   onResetNodes,
   isDraggingExternal = false,
+  draggedBrickType = null,
 }) => {
   const [draggedNodeIndex, setDraggedNodeIndex] = useState<number | null>(null);
+  const draggedNodeIndexRef = useRef<number | null>(null);
   const [activeDropIndex, setActiveDropIndex] = useState<number | null>(null);
   const [isWindowDragging, setIsWindowDragging] = useState<boolean>(false);
   const [showMetaSettings, setShowMetaSettings] = useState<boolean>(false);
@@ -99,10 +104,23 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
     const targetId = targetNodeId || selectedNodeId;
     if (targetId) {
       const targetNode = nodes.find((n) => n.id === targetId);
-      if (targetNode && 'text' in targetNode) {
-        const current = (targetNode as any).text || '';
-        const updated = current ? `${current} ${tag}` : tag;
-        onUpdateNode({ ...targetNode, text: updated });
+      if (targetNode) {
+        if ('text' in targetNode) {
+          const current = (targetNode as any).text || '';
+          const updated = current ? `${current} ${tag}` : tag;
+          onUpdateNode({ ...targetNode, text: updated });
+        } else if (targetNode.type === 'two_col_left_graphic' || targetNode.type === 'two_col_right_graphic') {
+          const current = targetNode.paragraph || '';
+          const updated = current ? `${current} ${tag}` : tag;
+          onUpdateNode({ ...targetNode, paragraph: updated });
+        } else if (targetNode.type === 'bullet_list' || targetNode.type === 'numbered_list') {
+          const lastIdx = targetNode.items.length - 1;
+          if (lastIdx >= 0) {
+            const newItems = [...targetNode.items];
+            newItems[lastIdx] = newItems[lastIdx] ? `${newItems[lastIdx]} ${tag}` : tag;
+            onUpdateNode({ ...targetNode, items: newItems });
+          }
+        }
       }
     }
     try {
@@ -265,6 +283,17 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
     const [moved] = updated.splice(index, 1);
     updated.splice(targetIndex, 0, moved);
     onUpdateNodes(updated);
+    onSelectNode(moved.id);
+  };
+
+  const handleReorderNode = (fromIndex: number, targetIndex: number) => {
+    if (fromIndex === targetIndex || fromIndex < 0 || fromIndex >= nodes.length) return;
+    const safeTarget = Math.max(0, Math.min(targetIndex, nodes.length - 1));
+    const updated = [...nodes];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(safeTarget, 0, moved);
+    onUpdateNodes(updated);
+    onSelectNode(moved.id);
   };
 
   const duplicateNode = (index: number) => {
@@ -288,22 +317,73 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
 
   // HTML5 Drag & Drop for reordering and incoming palette drops
   const handleDragStart = (e: React.DragEvent, index: number) => {
+    draggedNodeIndexRef.current = index;
     setDraggedNodeIndex(index);
-    e.dataTransfer.setData('application/json', JSON.stringify({ source: 'overview', index }));
     e.dataTransfer.setData('text/plain', `overview:${index}`);
+    e.dataTransfer.setData('reorder-node', String(index));
+    e.dataTransfer.setData('application/json', JSON.stringify({ source: 'overview', index }));
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+  const handleDrop = (e: React.DragEvent, targetIndex: number, isCardDrop = false) => {
     e.preventDefault();
     e.stopPropagation();
     setActiveDropIndex(null);
-    setDraggedNodeIndex(null);
     setIsWindowDragging(false);
 
     try {
+      // 1. Check if this is an internal reorder of an existing node
+      let reorderFromIndex: number | null = null;
+      if (draggedNodeIndexRef.current !== null) {
+        reorderFromIndex = draggedNodeIndexRef.current;
+      }
+
+      if (reorderFromIndex === null) {
+        const reorderStr = e.dataTransfer.getData('reorder-node');
+        if (reorderStr !== '' && !isNaN(Number(reorderStr))) {
+          reorderFromIndex = Number(reorderStr);
+        }
+      }
+
+      if (reorderFromIndex === null) {
+        const textData = e.dataTransfer.getData('text/plain')?.trim();
+        if (textData && textData.startsWith('overview:')) {
+          const idx = parseInt(textData.replace('overview:', ''), 10);
+          if (!isNaN(idx)) reorderFromIndex = idx;
+        }
+      }
+
+      if (reorderFromIndex === null) {
+        const jsonStr = e.dataTransfer.getData('application/json');
+        if (jsonStr) {
+          try {
+            const parsed = JSON.parse(jsonStr);
+            if (parsed?.source === 'overview' && typeof parsed.index === 'number') {
+              reorderFromIndex = parsed.index;
+            }
+          } catch {}
+        }
+      }
+
+      if (reorderFromIndex !== null) {
+        const fromIndex = reorderFromIndex;
+        draggedNodeIndexRef.current = null;
+        setDraggedNodeIndex(null);
+
+        if (isCardDrop) {
+          handleReorderNode(fromIndex, targetIndex);
+        } else {
+          const destIndex = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
+          handleReorderNode(fromIndex, destIndex);
+        }
+        return;
+      }
+
+      // 2. Incoming new brick from palette
+      draggedNodeIndexRef.current = null;
+      setDraggedNodeIndex(null);
+
       let paletteType: NodeType | null = null;
-      const rawText = e.dataTransfer.getData('text/plain')?.trim();
       const validTypes: NodeType[] = [
         'title',
         'heading',
@@ -314,32 +394,40 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
         'two_col_left_graphic',
         'two_col_right_graphic',
         'button_cta',
+        'vehicle_card',
+        'url',
       ];
 
+      // Check text/plain
+      const rawText = e.dataTransfer.getData('text/plain')?.trim();
       if (rawText && validTypes.includes(rawText as NodeType)) {
         paletteType = rawText as NodeType;
       }
 
-      const dataStr = e.dataTransfer.getData('application/json');
-      if (dataStr) {
-        try {
-          const parsed = JSON.parse(dataStr);
-          if (parsed?.type && validTypes.includes(parsed.type)) {
-            paletteType = parsed.type;
-          }
-          // Internal reordering
-          if (parsed?.source === 'overview' && typeof parsed.index === 'number') {
-            const fromIndex = parsed.index;
-            if (fromIndex === targetIndex || fromIndex === targetIndex - 1) return;
-            const updated = [...nodes];
-            const [moved] = updated.splice(fromIndex, 1);
-            const insertIndex = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
-            updated.splice(insertIndex, 0, moved);
-            onUpdateNodes(updated);
-            onSelectNode(moved.id);
-            return;
-          }
-        } catch (err) {}
+      // Check custom brick-type
+      if (!paletteType) {
+        const brickType = e.dataTransfer.getData('brick-type')?.trim();
+        if (brickType && validTypes.includes(brickType as NodeType)) {
+          paletteType = brickType as NodeType;
+        }
+      }
+
+      // Check application/json
+      if (!paletteType) {
+        const dataStr = e.dataTransfer.getData('application/json');
+        if (dataStr) {
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (parsed?.type && validTypes.includes(parsed.type)) {
+              paletteType = parsed.type;
+            }
+          } catch {}
+        }
+      }
+
+      // Fallback to passed draggedBrickType prop
+      if (!paletteType && draggedBrickType && validTypes.includes(draggedBrickType)) {
+        paletteType = draggedBrickType;
       }
 
       if (paletteType) {
@@ -351,20 +439,12 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
         onSelectNode(newNode.id);
         return;
       }
-
-      // Reordering fallback using local state
-      if (draggedNodeIndex !== null) {
-        const fromIndex = draggedNodeIndex;
-        if (fromIndex === targetIndex || fromIndex === targetIndex - 1) return;
-        const updated = [...nodes];
-        const [moved] = updated.splice(fromIndex, 1);
-        const insertIndex = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
-        updated.splice(insertIndex, 0, moved);
-        onUpdateNodes(updated);
-        onSelectNode(moved.id);
-      }
     } catch (err) {
       console.error('Drop error', err);
+    } finally {
+      draggedNodeIndexRef.current = null;
+      setDraggedNodeIndex(null);
+      setActiveDropIndex(null);
     }
   };
 
@@ -391,19 +471,23 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
             onDrop={(e) => handleDrop(e, targetIndex)}
             className={`p-6 border-2 border-dashed rounded-lg text-center flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${
               isOver
-                ? 'border-zinc-900 bg-zinc-100 text-zinc-900 shadow-xs'
+                ? 'border-teal-600 bg-teal-100 text-teal-950 font-bold shadow-xs'
+                : isDraggingAny
+                ? 'border-teal-400 bg-teal-50 text-teal-900 animate-pulse'
                 : 'border-zinc-300 bg-zinc-50 text-zinc-500 hover:border-zinc-400'
             }`}
           >
-            <Plus className="w-5 h-5 text-zinc-400" />
+            <Plus className="w-5 h-5 text-teal-600" />
             <span className="text-xs font-semibold">
-              {isOver ? 'Hier loslassen zum Platzieren' : 'Ersten Baustein hierher ziehen oder links anklicken'}
+              {isOver
+                ? 'Hier loslassen zum Platzieren'
+                : 'Ersten Baustein hierher ziehen oder links anklicken'}
             </span>
           </div>
         );
       }
 
-      // Subtle bottom drop slot - only expands/highlights when actively hovered
+      // Bottom drop slot
       return (
         <div
           key={`drop-zone-${targetIndex}`}
@@ -420,23 +504,51 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
           onDrop={(e) => handleDrop(e, targetIndex)}
           className={`transition-all duration-150 border-2 border-dashed rounded-lg text-center flex items-center justify-center cursor-pointer select-none ${
             isOver
-              ? 'p-3.5 border-zinc-900 bg-zinc-100 text-zinc-900 font-semibold shadow-xs'
+              ? 'p-3.5 border-teal-600 bg-teal-100 text-teal-950 font-bold shadow-xs'
+              : isDraggingAny
+              ? 'p-3 border-teal-400 bg-teal-50 text-teal-900 font-semibold'
               : 'p-2.5 border-zinc-200 hover:border-zinc-300 text-zinc-400 bg-white hover:text-zinc-600'
           }`}
         >
           <span className="text-xs flex items-center justify-center gap-1.5 pointer-events-none">
-            <Plus className={`w-3.5 h-3.5 ${isOver ? 'text-zinc-900' : 'text-zinc-400'}`} />
+            <Plus
+              className={`w-3.5 h-3.5 ${
+                isOver || isDraggingAny ? 'text-teal-700' : 'text-zinc-400'
+              }`}
+            />
             <span>
-              {isOver ? 'Hier am Ende platzieren' : '+ Baustein am Ende anfügen'}
+              {isOver
+                ? 'Hier am Ende platzieren'
+                : isDraggingAny
+                ? '+ Baustein am Ende anfügen'
+                : '+ Baustein am Ende anfügen'}
             </span>
           </span>
         </div>
       );
     }
 
-    // Between nodes or at top: ONLY shown if activeDropIndex === targetIndex!
-    // When not hovered, it's just a slim hit area to detect dragover without moving UI
+    // Between nodes or at top:
     if (!isOver) {
+      if (isDraggingAny) {
+        return (
+          <div
+            key={`drop-gap-${targetIndex}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.dataTransfer.dropEffect = 'copy';
+              if (activeDropIndex !== targetIndex) setActiveDropIndex(targetIndex);
+            }}
+            onDrop={(e) => handleDrop(e, targetIndex)}
+            className="py-1.5 my-1 border-2 border-dashed border-teal-300/90 bg-teal-50/60 hover:bg-teal-100/80 hover:border-teal-600 rounded-lg flex items-center justify-center text-[11px] text-teal-800 font-medium transition-all cursor-pointer"
+          >
+            <Plus className="w-3 h-3 text-teal-600 mr-1" />
+            <span>Hier einfügen</span>
+          </div>
+        );
+      }
+
       return (
         <div
           key={`drop-gap-${targetIndex}`}
@@ -451,7 +563,7 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
       );
     }
 
-    // Active hover drop zone: clearly shows the insertion position right under the cursor
+    // Active hover drop zone
     return (
       <div
         key={`drop-zone-${targetIndex}`}
@@ -467,9 +579,9 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
           }
         }}
         onDrop={(e) => handleDrop(e, targetIndex)}
-        className="p-3 my-1 border-2 border-dashed border-zinc-900 bg-zinc-100 text-zinc-900 font-semibold text-xs rounded-lg text-center flex items-center justify-center gap-1.5 shadow-xs transition-all duration-150 select-none animate-fadeIn"
+        className="p-3 my-1 border-2 border-dashed border-teal-600 bg-teal-100 text-teal-950 font-bold text-xs rounded-lg text-center flex items-center justify-center gap-1.5 shadow-xs transition-all duration-150 select-none animate-fadeIn"
       >
-        <Plus className="w-3.5 h-3.5 text-zinc-900 pointer-events-none" />
+        <Plus className="w-3.5 h-3.5 text-teal-700 pointer-events-none" />
         <span className="pointer-events-none">Hier loslassen zum Platzieren</span>
       </div>
     );
@@ -559,20 +671,39 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
             )}
           </div>
           <div className="flex flex-wrap gap-1.5 pt-0.5">
-            {SYSTEM_TAGS_LIST.map((item) => (
-              <button
-                key={item.tag}
-                type="button"
-                onClick={() => handleInsertTag(item.tag)}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white hover:bg-amber-100 border border-amber-300 text-amber-950 font-mono text-[11px] font-semibold transition-all shadow-2xs hover:shadow-xs active:scale-95"
-                title={`${item.description} (Klicken zum Einfügen/Kopieren)`}
-              >
-                <span>{item.tag}</span>
-                <span className="text-[10px] font-sans font-normal text-amber-700 border-l border-amber-200 pl-1">
-                  {item.label}
-                </span>
-              </button>
-            ))}
+            {SYSTEM_TAGS_LIST.map((item) => {
+              const lower = item.tag.toLowerCase();
+              const isMail = lower.includes('mail');
+              const isImage = lower.includes('bild');
+              const isFahrzeug = lower.includes('fahrzeug') || ['%marke%', '%modell%', '%preis%', '%datum%', '%km%', '%ps%', '%schaltung%', '%energie%', '%antrieb%'].includes(lower);
+              const isUrl = lower.includes('reset');
+              const isFirma = lower.includes('firma');
+              const isTermin = lower.includes('termin');
+
+              let badgeStyle = "bg-white hover:bg-amber-100 border-amber-300 text-amber-950";
+              if (isMail) badgeStyle = "bg-purple-50 hover:bg-purple-100 border-purple-300 text-purple-950 font-bold";
+              else if (isImage) badgeStyle = "bg-indigo-50 hover:bg-indigo-100 border-indigo-300 text-indigo-950 font-bold";
+              else if (isFirma) badgeStyle = "bg-orange-50 hover:bg-orange-100 border-orange-300 text-orange-950 font-bold";
+              else if (isTermin) badgeStyle = "bg-cyan-50 hover:bg-cyan-100 border-cyan-300 text-cyan-950 font-bold";
+              else if (lower === '%fahrzeugname%') badgeStyle = "bg-teal-50 hover:bg-teal-100 border-teal-300 text-teal-950 font-bold";
+              else if (isFahrzeug) badgeStyle = "bg-teal-50/70 hover:bg-teal-100 border-teal-200 text-teal-900";
+              else if (isUrl) badgeStyle = "bg-blue-50 hover:bg-blue-100 border-blue-300 text-blue-950";
+
+              return (
+                <button
+                  key={item.tag}
+                  type="button"
+                  onClick={() => handleInsertTag(item.tag)}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded border font-mono text-[11px] font-semibold transition-all shadow-2xs hover:shadow-xs active:scale-95 ${badgeStyle}`}
+                  title={`${item.description} (Klicken zum Einfügen/Kopieren)`}
+                >
+                  <span>{item.tag}</span>
+                  <span className="text-[10px] font-sans font-normal opacity-75 border-l border-current/20 pl-1">
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -609,6 +740,14 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
 
       {/* Sequence of Nodes (Scrollable list with inline accordion editor) */}
       <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleDrop(e, nodes.length);
+        }}
         onDragLeave={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           if (
@@ -636,34 +775,56 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  e.dataTransfer.dropEffect = 'copy';
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const midY = rect.top + rect.height / 2;
-                  const targetIdx = e.clientY < midY ? index : index + 1;
-                  if (activeDropIndex !== targetIdx) {
-                    setActiveDropIndex(targetIdx);
+                  const isReorder = draggedNodeIndexRef.current !== null || draggedNodeIndex !== null;
+                  e.dataTransfer.dropEffect = isReorder ? 'move' : 'copy';
+                  if (activeDropIndex !== index) {
+                    setActiveDropIndex(index);
                   }
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const midY = rect.top + rect.height / 2;
-                  const targetIdx = e.clientY < midY ? index : index + 1;
-                  handleDrop(e, targetIdx);
+                  const isReorder = draggedNodeIndexRef.current !== null || draggedNodeIndex !== null;
+                  if (isReorder) {
+                    handleDrop(e, index, true);
+                  } else {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    const targetIdx = e.clientY < midY ? index : index + 1;
+                    handleDrop(e, targetIdx, false);
+                  }
                 }}
-                className={`rounded-lg border transition-all duration-150 overflow-hidden ${
+                className={`rounded-lg border transition-all duration-150 overflow-hidden relative ${
                   isSelected
                     ? 'border-zinc-900 bg-white ring-1 ring-zinc-900/10 shadow-xs'
                     : 'border-zinc-200 bg-white hover:border-zinc-300'
-                } ${draggedNodeIndex === index ? 'opacity-40 scale-[0.99] border-dashed' : ''}`}
+                } ${draggedNodeIndex === index ? 'opacity-40 scale-[0.99] border-dashed border-zinc-400' : ''} ${
+                  activeDropIndex === index && draggedNodeIndex !== index
+                    ? 'ring-2 ring-teal-500 ring-offset-1 bg-teal-50/20'
+                    : ''
+                }`}
               >
-                {/* Card Header: Drag handle, info, actions */}
+                {/* Card Header: Draggable, info, actions */}
                 <div
+                  draggable
+                  onDragStart={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button, input, select, textarea, a')) {
+                      e.preventDefault();
+                      return;
+                    }
+                    handleDragStart(e, index);
+                  }}
+                  onDragEnd={() => {
+                    draggedNodeIndexRef.current = null;
+                    setDraggedNodeIndex(null);
+                    setActiveDropIndex(null);
+                  }}
                   onClick={() => onSelectNode(isSelected ? null : node.id)}
-                  className={`px-2.5 py-2 flex items-center justify-between gap-1.5 cursor-pointer select-none transition-colors ${
+                  className={`px-2.5 py-2 flex items-center justify-between gap-1.5 cursor-grab active:cursor-grabbing select-none transition-colors ${
                     isSelected ? 'bg-zinc-50 border-b border-zinc-200' : 'hover:bg-zinc-50/60'
                   }`}
+                  title="Klicken zum Bearbeiten • Ziehen zum Verschieben"
                 >
                   {/* Drag Handle & Position */}
                   <div className="flex items-center gap-1.5 min-w-0">
@@ -674,11 +835,12 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                         handleDragStart(e, index);
                       }}
                       onDragEnd={() => {
+                        draggedNodeIndexRef.current = null;
                         setDraggedNodeIndex(null);
                         setActiveDropIndex(null);
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="cursor-grab active:cursor-grabbing p-0.5 text-zinc-400 hover:text-zinc-700"
+                      className="cursor-grab active:cursor-grabbing p-1 text-zinc-400 hover:text-zinc-700 rounded hover:bg-zinc-200/60 transition-colors"
                       title="Ziehen zum Neuanordnen"
                     >
                       <GripVertical className="w-3.5 h-3.5" />
@@ -710,20 +872,26 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                   <button
                     type="button"
                     disabled={index === 0}
-                    onClick={() => moveNode(index, 'up')}
-                    className="p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 disabled:opacity-20 disabled:pointer-events-none"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveNode(index, 'up');
+                    }}
+                    className="p-1 rounded text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
                     title="Nach oben verschieben"
                   >
-                    <ChevronUp className="w-3 h-3" />
+                    <ChevronUp className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
                     disabled={index === nodes.length - 1}
-                    onClick={() => moveNode(index, 'down')}
-                    className="p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 disabled:opacity-20 disabled:pointer-events-none"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveNode(index, 'down');
+                    }}
+                    className="p-1 rounded text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200 disabled:opacity-20 disabled:pointer-events-none transition-colors"
                     title="Nach unten verschieben"
                   >
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
@@ -843,6 +1011,54 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleInsertTag('%Mail%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Mail% einfügen"
+                        >
+                          + %Mail%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Firma%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-orange-50 hover:bg-orange-100 text-orange-950 border border-orange-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Firma% einfügen"
+                        >
+                          + %Firma%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%FirmaOrt%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-orange-50 hover:bg-orange-100 text-orange-950 border border-orange-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%FirmaOrt% einfügen"
+                        >
+                          + %FirmaOrt%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%TerminDate%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-cyan-50 hover:bg-cyan-100 text-cyan-950 border border-cyan-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%TerminDate% einfügen"
+                        >
+                          + %TerminDate%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%TerminTime%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-cyan-50 hover:bg-cyan-100 text-cyan-950 border border-cyan-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%TerminTime% einfügen"
+                        >
+                          + %TerminTime%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Fahrzeugname%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Fahrzeugname% einfügen"
+                        >
+                          + %Fahrzeugname%
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleInsertTag('%Anrede% %Nachname%', node.id)}
                           className="px-1.5 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 font-mono text-[10px] transition-colors"
                           title="%Anrede% %Nachname% einfügen"
@@ -892,6 +1108,54 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                         >
                           + %Nachname%
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Mail%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Mail% einfügen"
+                        >
+                          + %Mail%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Firma%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-orange-50 hover:bg-orange-100 text-orange-950 border border-orange-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Firma% einfügen"
+                        >
+                          + %Firma%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%FirmaOrt%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-orange-50 hover:bg-orange-100 text-orange-950 border border-orange-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%FirmaOrt% einfügen"
+                        >
+                          + %FirmaOrt%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%TerminDate%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-cyan-50 hover:bg-cyan-100 text-cyan-950 border border-cyan-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%TerminDate% einfügen"
+                        >
+                          + %TerminDate%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%TerminTime%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-cyan-50 hover:bg-cyan-100 text-cyan-950 border border-cyan-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%TerminTime% einfügen"
+                        >
+                          + %TerminTime%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInsertTag('%Fahrzeugname%', node.id)}
+                          className="px-1.5 py-0.5 rounded bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Fahrzeugname% einfügen"
+                        >
+                          + %Fahrzeugname%
+                        </button>
                       </div>
 
                       <textarea
@@ -908,17 +1172,57 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                   {node.type === 'graphic' && (
                     <div className="space-y-2.5">
                       <div>
-                        <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
-                          Bild-URL
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] font-semibold text-zinc-700">
+                            Bild-URL oder System-Tag
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onUpdateNode({ ...node, imageUrl: '%Fahrzeugbild%' })}
+                              className="px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-950 border border-indigo-200 font-mono text-[10px] font-semibold transition-colors"
+                              title="%Fahrzeugbild% einsetzen"
+                            >
+                              + %Fahrzeugbild%
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onUpdateNode({ ...node, imageUrl: '%Bild%' })}
+                              className="px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-950 border border-indigo-200 font-mono text-[10px] font-semibold transition-colors"
+                              title="%Bild% einsetzen"
+                            >
+                              + %Bild%
+                            </button>
+                          </div>
+                        </div>
                         <input
-                          type="url"
+                          type="text"
                           value={node.imageUrl}
                           onChange={(e) => onUpdateNode({ ...node, imageUrl: e.target.value })}
-                          className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
-                          placeholder="https://..."
+                          className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none font-mono"
+                          placeholder="https://... oder %Bild% / %Fahrzeugbild%"
                         />
                       </div>
+
+                      {/* 4:3 Platzhalter-Box Vorschau */}
+                      {isPlaceholderGraphic(node.imageUrl) ? (
+                        <div className="p-2.5 bg-zinc-50 rounded-lg border border-dashed border-zinc-300 text-center">
+                          <div
+                            className="w-full aspect-[4/3] max-w-[200px] mx-auto rounded-lg bg-[#F4F4F6] border border-dashed border-zinc-300 flex flex-col items-center justify-center p-3 select-none"
+                            style={{ aspectRatio: '4/3' }}
+                          >
+                            <span className="font-mono text-xs font-bold text-zinc-700">
+                              {formatPlaceholderTag(node.imageUrl, 'Bild')}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 mt-0.5">
+                              4:3 Platzhalter
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 mt-1.5">
+                            Leere Box mit <span className="font-mono font-bold text-zinc-700">{formatPlaceholderTag(node.imageUrl, 'Bild')}</span> im 4:3-Format (ohne Bild).
+                          </p>
+                        </div>
+                      ) : null}
 
                       {/* Quick Sample Image Picker */}
                       <div>
@@ -1106,14 +1410,35 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
-                          Grafik URL
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] font-semibold text-zinc-700">
+                            Grafik URL oder System-Tag
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onUpdateNode({ ...node, imageUrl: '%Fahrzeugbild%' })}
+                              className="px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-950 border border-indigo-200 font-mono text-[10px] font-semibold transition-colors"
+                              title="%Fahrzeugbild% einsetzen"
+                            >
+                              + %Fahrzeugbild%
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onUpdateNode({ ...node, imageUrl: '%Bild%' })}
+                              className="px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-950 border border-indigo-200 font-mono text-[10px] font-semibold transition-colors"
+                              title="%Bild% einsetzen"
+                            >
+                              + %Bild%
+                            </button>
+                          </div>
+                        </div>
                         <input
-                          type="url"
+                          type="text"
                           value={node.imageUrl}
                           onChange={(e) => onUpdateNode({ ...node, imageUrl: e.target.value })}
-                          className="w-full px-2.5 py-1 border border-zinc-200 rounded-lg text-xs"
+                          className="w-full px-2.5 py-1 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
+                          placeholder="https://... oder %Fahrzeugbild% / %Bild%"
                         />
                       </div>
 
@@ -1149,6 +1474,27 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                   {/* 9. Button CTA */}
                   {node.type === 'button_cta' && (
                     <div className="space-y-2">
+                      {/* Quick Tag Insertion Chips */}
+                      <div className="flex items-center gap-1 text-[10px] flex-wrap">
+                        <span className="text-zinc-400">System-Tags:</span>
+                        <button
+                          type="button"
+                          onClick={() => onUpdateNode({ ...node, url: '%Reset%' })}
+                          className="px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-[#1B3C71] border border-blue-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="Ziel-URL auf %Reset% setzen"
+                        >
+                          + %Reset%
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onUpdateNode({ ...node, url: 'mailto:%Mail%' })}
+                          className="px-1.5 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-950 border border-purple-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="Ziel-URL auf mailto:%Mail% setzen"
+                        >
+                          + %Mail%
+                        </button>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                           <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
@@ -1166,11 +1512,11 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                             Ziel-URL
                           </label>
                           <input
-                            type="url"
+                            type="text"
                             value={node.url}
                             onChange={(e) => onUpdateNode({ ...node, url: e.target.value })}
                             className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
-                            placeholder="https://..."
+                            placeholder="https://... oder %Reset% / mailto:%Mail%"
                           />
                         </div>
                       </div>
@@ -1219,6 +1565,7 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                             onClick={() =>
                               onUpdateNode({
                                 ...node,
+                                imageUrl: '%Fahrzeugbild%',
                                 brand: '%Marke%',
                                 brandModel: '%Modell%',
                                 price: '%Preis%',
@@ -1241,6 +1588,7 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                             onClick={() =>
                               onUpdateNode({
                                 ...node,
+                                imageUrl: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
                                 brand: 'Mercedes-Benz',
                                 brandModel: 'AMG GT 63 S E Performance 4MATIC',
                                 price: "CHF 72'500",
@@ -1290,21 +1638,31 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                             <label className="text-[11px] font-semibold text-zinc-700">
                               Modell (H3: 18px Semi Bold)
                             </label>
-                            <button
-                              type="button"
-                              onClick={() => onUpdateNode({ ...node, brandModel: '%Modell%' })}
-                              className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
-                              title="%Modell% einsetzen"
-                            >
-                              + %Modell%
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => onUpdateNode({ ...node, brandModel: '%Fahrzeugname%' })}
+                                className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                                title="%Fahrzeugname% einsetzen"
+                              >
+                                + %Fahrzeugname%
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onUpdateNode({ ...node, brandModel: '%Modell%' })}
+                                className="text-[10px] text-teal-700 font-mono font-semibold hover:underline bg-teal-50 px-1 py-0.5 rounded border border-teal-200"
+                                title="%Modell% einsetzen"
+                              >
+                                + %Modell%
+                              </button>
+                            </div>
                           </div>
                           <input
                             type="text"
                             value={node.brandModel}
                             onChange={(e) => onUpdateNode({ ...node, brandModel: e.target.value })}
                             className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs font-semibold focus:ring-1 focus:ring-zinc-900 focus:outline-none"
-                            placeholder="z.B. AMG GT 63 S oder %Modell%"
+                            placeholder="z.B. AMG GT 63 S oder %Modell% / %Fahrzeugname%"
                           />
                         </div>
                       </div>
@@ -1334,15 +1692,35 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
-                            Fahrzeug-Bild (URL)
-                          </label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[11px] font-semibold text-zinc-700">
+                              Fahrzeug-Bild (URL oder System-Tag)
+                            </label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => onUpdateNode({ ...node, imageUrl: '%Fahrzeugbild%' })}
+                                className="text-[10px] text-indigo-700 font-mono font-semibold hover:underline bg-indigo-50 px-1 py-0.5 rounded border border-indigo-200"
+                                title="%Fahrzeugbild% einsetzen"
+                              >
+                                + %Fahrzeugbild%
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onUpdateNode({ ...node, imageUrl: '%Bild%' })}
+                                className="text-[10px] text-indigo-700 font-mono font-semibold hover:underline bg-indigo-50 px-1 py-0.5 rounded border border-indigo-200"
+                                title="%Bild% einsetzen"
+                              >
+                                + %Bild%
+                              </button>
+                            </div>
+                          </div>
                           <input
-                            type="url"
+                            type="text"
                             value={node.imageUrl}
                             onChange={(e) => onUpdateNode({ ...node, imageUrl: e.target.value })}
                             className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-lg text-xs focus:ring-1 focus:ring-zinc-900 focus:outline-none"
-                            placeholder="https://..."
+                            placeholder="https://... oder %Fahrzeugbild% / %Bild%"
                           />
                         </div>
                       </div>
@@ -1536,7 +1914,7 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                         </div>
                       </div>
 
-                      {/* Quick Tag Button für %Reset% */}
+                      {/* Quick Tag Button für %Reset% und %Mail% */}
                       <div className="flex items-center gap-1 text-[10px] flex-wrap">
                         <span className="text-zinc-400">System-Tags:</span>
                         <button
@@ -1552,6 +1930,20 @@ export const CombinedOverviewEditor: React.FC<CombinedOverviewEditorProps> = ({
                           title="%Reset% Tag einfügen"
                         >
                           + %Reset% (Reset-URL)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateNode({
+                              ...node,
+                              url: 'mailto:%Mail%',
+                              label: node.label ? `${node.label} %Mail%` : '%Mail%',
+                            })
+                          }
+                          className="px-1.5 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-950 border border-purple-200 font-mono text-[10px] font-semibold transition-colors"
+                          title="%Mail% E-Mail Link einfügen"
+                        >
+                          + %Mail% (E-Mail)
                         </button>
                       </div>
 

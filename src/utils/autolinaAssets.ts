@@ -33,11 +33,15 @@ export const AUTOLINA_COLORS = {
 export const SYSTEM_TAGS = {
   anrede: '%Anrede%',
   nachname: '%Nachname%',
+  vorname: '%Vorname%',
+  mail: '%Mail%',
   reset: '%Reset%',
   greetingCombined: '%Anrede% %Nachname%',
   greetingFull: 'Guten Tag %Anrede% %Nachname%,',
-  vorname: '%Vorname%',
-  // Fahrzeug System-Tags gemäss autolina Standard
+  // Fahrzeug & Bild System-Tags gemäss autolina Standard
+  fahrzeugname: '%Fahrzeugname%',
+  fahrzeugbild: '%Fahrzeugbild%',
+  bild: '%Bild%',
   marke: '%Marke%',
   modell: '%Modell%',
   preis: '%Preis%',
@@ -47,6 +51,11 @@ export const SYSTEM_TAGS = {
   schaltung: '%Schaltung%',
   energie: '%Energie%',
   antrieb: '%Antrieb%',
+  // Partner, Standort & Termin System-Tags
+  firma: '%Firma%',
+  firmaOrt: '%FirmaOrt%',
+  terminDate: '%TerminDate%',
+  terminTime: '%TerminTime%',
 } as const;
 
 export const SYSTEM_TAGS_LIST = [
@@ -63,10 +72,40 @@ export const SYSTEM_TAGS_LIST = [
     example: 'Muster',
   },
   {
+    tag: '%Vorname%',
+    label: 'Vorname',
+    description: 'Vorname des Empfängers',
+    example: 'Max',
+  },
+  {
+    tag: '%Mail%',
+    label: 'E-Mail',
+    description: 'E-Mail-Adresse des Kunden / Empfängers',
+    example: 'max.muster@autolina.ch',
+  },
+  {
     tag: '%Reset%',
     label: 'URL-Tag %Reset%',
     description: 'Generiert den individuellen Sicherheitslink für Passwörter oder Bestätigungen',
     example: 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo',
+  },
+  {
+    tag: '%Fahrzeugname%',
+    label: 'Fahrzeugname',
+    description: 'Vollständige Fahrzeugbezeichnung (Marke + Modell)',
+    example: 'Mercedes-Benz AMG GT 63 S E Performance 4MATIC',
+  },
+  {
+    tag: '%Fahrzeugbild%',
+    label: 'Fahrzeugbild',
+    description: 'Dynamische Bild-URL des Fahrzeug-Inserats',
+    example: 'https://images.autolina.ch/vehicles/amg-gt-63.jpg',
+  },
+  {
+    tag: '%Bild%',
+    label: 'Bild (Grafik-URL)',
+    description: 'Dynamische Bild- oder Banner-URL für Kampagnen',
+    example: 'https://images.autolina.ch/campaigns/hero-banner.jpg',
   },
   {
     tag: '%Marke%',
@@ -123,6 +162,30 @@ export const SYSTEM_TAGS_LIST = [
     example: 'Vorderradantrieb',
   },
   {
+    tag: '%Firma%',
+    label: 'Firma',
+    description: 'Name des Autohauses / Partnerunternehmens / Händlers',
+    example: 'Garage Muster AG',
+  },
+  {
+    tag: '%FirmaOrt%',
+    label: 'Firma Ort',
+    description: 'Standort / Ortschaft des Autohauses / Partnerbetriebs',
+    example: 'Zürich',
+  },
+  {
+    tag: '%TerminDate%',
+    label: 'Termin-Datum',
+    description: 'Vereinbartes Datum für Probefahrt, Service oder Übergabe',
+    example: '15.10.2026',
+  },
+  {
+    tag: '%TerminTime%',
+    label: 'Termin-Uhrzeit',
+    description: 'Uhrzeit / Zeitfenster des vereinbarten Termins',
+    example: '14:30 Uhr',
+  },
+  {
     tag: '%Anrede% %Nachname%',
     label: 'Anrede + Nachname',
     description: 'Kombination für die persönliche Begrüssung',
@@ -137,6 +200,10 @@ export const SYSTEM_TAGS_LIST = [
 ];
 
 export interface SampleVehicleValues {
+  fahrzeugname?: string;
+  fahrzeugbild?: string;
+  bild?: string;
+  mail?: string;
   marke?: string;
   modell?: string;
   preis?: string;
@@ -146,9 +213,17 @@ export interface SampleVehicleValues {
   schaltung?: string;
   energie?: string;
   antrieb?: string;
+  firma?: string;
+  firmaOrt?: string;
+  terminDate?: string;
+  terminTime?: string;
 }
 
 export const DEFAULT_SAMPLE_VEHICLE: SampleVehicleValues = {
+  fahrzeugname: 'Mercedes-Benz AMG GT 63 S E Performance 4MATIC',
+  fahrzeugbild: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
+  bild: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80',
+  mail: 'max.muster@autolina.ch',
   marke: 'Mercedes-Benz',
   modell: 'AMG GT 63 S E Performance 4MATIC',
   preis: "CHF 72'500",
@@ -158,6 +233,10 @@ export const DEFAULT_SAMPLE_VEHICLE: SampleVehicleValues = {
   schaltung: 'Handschaltung',
   energie: 'Plug-in-Hybrid',
   antrieb: 'Vorderradantrieb',
+  firma: 'Garage Muster AG',
+  firmaOrt: 'Zürich',
+  terminDate: '15.10.2026',
+  terminTime: '14:30 Uhr',
 };
 
 /**
@@ -169,7 +248,11 @@ export function replaceSystemTags(
     anrede?: string;
     nachname?: string;
     vorname?: string;
+    mail?: string;
     reset?: string;
+    fahrzeugname?: string;
+    fahrzeugbild?: string;
+    bild?: string;
     marke?: string;
     modell?: string;
     preis?: string;
@@ -179,10 +262,15 @@ export function replaceSystemTags(
     schaltung?: string;
     energie?: string;
     antrieb?: string;
+    firma?: string;
+    firmaOrt?: string;
+    terminDate?: string;
+    terminTime?: string;
   } = {
     anrede: 'Herr',
     nachname: 'Muster',
     vorname: 'Max',
+    mail: 'max.muster@autolina.ch',
     reset: 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo-xyz',
     ...DEFAULT_SAMPLE_VEHICLE,
   }
@@ -192,7 +280,11 @@ export function replaceSystemTags(
     .replace(/%Anrede%/g, sampleValues.anrede || 'Herr')
     .replace(/%Nachname%/g, sampleValues.nachname || 'Muster')
     .replace(/%Vorname%/g, sampleValues.vorname || 'Max')
+    .replace(/(%Mail%|%Email%|%E-Mail%)/gi, sampleValues.mail || 'max.muster@autolina.ch')
     .replace(/%Reset%/g, sampleValues.reset || 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo-xyz')
+    .replace(/%Fahrzeugname%/g, sampleValues.fahrzeugname || DEFAULT_SAMPLE_VEHICLE.fahrzeugname!)
+    .replace(/%Fahrzeugbild%/g, sampleValues.fahrzeugbild || DEFAULT_SAMPLE_VEHICLE.fahrzeugbild!)
+    .replace(/%Bild%/g, sampleValues.bild || DEFAULT_SAMPLE_VEHICLE.bild!)
     .replace(/%Marke%/g, sampleValues.marke || DEFAULT_SAMPLE_VEHICLE.marke!)
     .replace(/%Modell%/g, sampleValues.modell || DEFAULT_SAMPLE_VEHICLE.modell!)
     .replace(/%Preis%/g, sampleValues.preis || DEFAULT_SAMPLE_VEHICLE.preis!)
@@ -201,7 +293,11 @@ export function replaceSystemTags(
     .replace(/%PS%/g, sampleValues.ps || DEFAULT_SAMPLE_VEHICLE.ps!)
     .replace(/%Schaltung%/g, sampleValues.schaltung || DEFAULT_SAMPLE_VEHICLE.schaltung!)
     .replace(/%Energie%/g, sampleValues.energie || DEFAULT_SAMPLE_VEHICLE.energie!)
-    .replace(/%Antrieb%/g, sampleValues.antrieb || DEFAULT_SAMPLE_VEHICLE.antrieb!);
+    .replace(/%Antrieb%/g, sampleValues.antrieb || DEFAULT_SAMPLE_VEHICLE.antrieb!)
+    .replace(/%FirmaOrt%/g, sampleValues.firmaOrt || DEFAULT_SAMPLE_VEHICLE.firmaOrt!)
+    .replace(/%Firma%/g, sampleValues.firma || DEFAULT_SAMPLE_VEHICLE.firma!)
+    .replace(/%TerminDate%/g, sampleValues.terminDate || DEFAULT_SAMPLE_VEHICLE.terminDate!)
+    .replace(/%TerminTime%/g, sampleValues.terminTime || DEFAULT_SAMPLE_VEHICLE.terminTime!);
 }
 
 // Statische URLs zu den Original-Dateien im /public/assets Ordner
@@ -251,22 +347,27 @@ export function getAutolinaLogoSvg(width = 172, height = 38): string {
   </svg>`;
 }
 
+// Offizielle, gehostete PNG-Grafiken für 100% E-Mail-Client-Kompatibilität (Outlook, Gmail, Apple Mail)
+export const AUTOLINA_LIVE_LOGO_PNG = 'https://www.autolina.ch/media/logo.fe653decfaff4e10.png';
+export const APPLE_APP_STORE_BADGE_PNG = 'https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/de-de?size=250x83';
+export const GOOGLE_PLAY_STORE_BADGE_PNG = 'https://play.google.com/intl/en_us/badges/static/images/badges/de_badge_web_generic.png';
+
 // autolina Logo als robuster HTML-Code für E-Mails und Vorschau
 export function getAutolinaLogoHtml(width = 172, height = 38): string {
-  return `<img src="${AUTOLINA_LOGO_DATA_URI}" alt="autolina.ch" width="${width}" height="${height}" style="display:inline-block;vertical-align:middle;height:${height}px;width:auto;max-width:100%;border:0;" />`;
+  return `<img src="${AUTOLINA_LIVE_LOGO_PNG}" alt="autolina.ch" width="${width}" height="${height}" border="0" style="display:block;margin:0 auto;height:${height}px;width:auto;max-width:100%;border:0;outline:none;text-decoration:none;" />`;
 }
 
-// Apple App Store Badge (Original Vektor aus Vorgabe)
-export function getAppleBadgeHtml(): string {
-  return `<a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;line-height:0;vertical-align:middle;">
-    <img src="${APP_STORE_BADGE_DATA_URI}" alt="Download on the App Store" width="120" height="40" style="display:inline-block;vertical-align:middle;height:40px;width:auto;max-width:135px;border:0;border-radius:8px;" />
+// Apple App Store Badge (100% E-Mail-kompatibles PNG)
+export function getAppleBadgeHtml(width = 120, height = 40): string {
+  return `<a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;border:0;line-height:0;">
+    <img src="${APPLE_APP_STORE_BADGE_PNG}" alt="Download on the App Store" width="${width}" height="${height}" border="0" style="display:block;height:${height}px;width:auto;max-width:${width}px;border:0;border-radius:8px;" />
   </a>`;
 }
 
-// Google Play Store Badge (Original Vektor aus Vorgabe)
-export function getGooglePlayBadgeHtml(): string {
-  return `<a href="https://play.google.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;line-height:0;vertical-align:middle;">
-    <img src="${GOOGLE_PLAY_BADGE_DATA_URI}" alt="GET IT ON Google Play" width="135" height="40" style="display:inline-block;vertical-align:middle;height:40px;width:auto;max-width:145px;border:0;border-radius:8px;" />
+// Google Play Store Badge (100% E-Mail-kompatibles PNG)
+export function getGooglePlayBadgeHtml(width = 135, height = 40): string {
+  return `<a href="https://play.google.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;border:0;line-height:0;">
+    <img src="${GOOGLE_PLAY_STORE_BADGE_PNG}" alt="GET IT ON Google Play" width="${width}" height="${height}" border="0" style="display:block;height:${height}px;width:auto;max-width:${width}px;border:0;border-radius:8px;" />
   </a>`;
 }
 
@@ -332,37 +433,33 @@ export function getGooglePlayBadgeSvgLink(width = 135, height = 40): string {
 }
 
 
-// Social Media Links (Instagram, LinkedIn, Facebook, YouTube) als HTML
+// Social Media Links (Instagram, LinkedIn, Facebook, YouTube) als 100% E-Mail-kompatible Tabelle
 export function getSocialMediaLinksHtml(): string {
   const links = [
-    {
-      name: 'Instagram',
-      url: 'https://www.instagram.com/autolina.ch/',
-      iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>`,
-    },
-    {
-      name: 'LinkedIn',
-      url: 'https://www.linkedin.com/company/autolina-ch-ag/',
-      iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>`,
-    },
-    {
-      name: 'Facebook',
-      url: 'https://www.facebook.com/autolina.ch/',
-      iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>`,
-    },
-    {
-      name: 'YouTube',
-      url: 'https://www.youtube.com/@autolinach',
-      iconSvg: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#000000"/></svg>`,
-    },
+    { name: 'Instagram', url: 'https://www.instagram.com/autolina.ch/' },
+    { name: 'LinkedIn', url: 'https://www.linkedin.com/company/autolina-ch-ag/' },
+    { name: 'Facebook', url: 'https://www.facebook.com/autolina.ch/' },
+    { name: 'YouTube', url: 'https://www.youtube.com/@autolinach' },
   ];
 
-  return links
+  const cells = links
     .map(
-      (link) =>
-        `<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="nl-social-link" style="color:#000000;text-decoration:none;font-family:'Inter', Arial, sans-serif;font-size:13px;font-weight:500;display:inline-flex;align-items:center;padding:4px 8px;margin:2px 4px;border-radius:6px;transition:opacity 0.15s ease;">${link.iconSvg}<span>${link.name}</span></a>`
+      (link, idx) =>
+        `<td align="center" style="padding:4px 10px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;line-height:120%;">
+          <a href="${link.url}" target="_blank" rel="noopener noreferrer" style="color:#000000;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;display:inline-block;">${link.name}</a>
+        </td>${
+          idx < links.length - 1
+            ? `<td style="color:#CBD5E1;font-size:12px;line-height:1;padding:0 2px;vertical-align:middle;">&bull;</td>`
+            : ''
+        }`
     )
     .join('\n        ');
+
+  return `<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;border-collapse:collapse;">
+      <tr>
+        ${cells}
+      </tr>
+    </table>`;
 }
 
 // 6 Fahrzeug-Spezifikations-Icons als Inline-SVG für HTML-E-Mails
@@ -381,4 +478,50 @@ export function getVehicleSpecIconSvg(type: 'date' | 'mileage' | 'power' | 'tran
     case 'drive':
       return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block;margin-right:6px;"><rect x="3" y="4" width="4" height="6" rx="1.5" /><rect x="17" y="4" width="4" height="6" rx="1.5" /><rect x="3" y="14" width="4" height="6" rx="1.5" /><rect x="17" y="14" width="4" height="6" rx="1.5" /><line x1="7" y1="7" x2="17" y2="7" /><line x1="7" y1="17" x2="17" y2="17" /><line x1="12" y1="7" x2="12" y2="17" /><circle cx="12" cy="12" r="1.5" fill="#71717A" /></svg>`;
   }
+}
+
+/**
+ * Checks if a given imageUrl string represents a placeholder graphic (e.g. %Bild%, %Fahrzeugbild%, empty)
+ * rather than a real image URL.
+ */
+export function isPlaceholderGraphic(url?: string): boolean {
+  if (!url || !url.trim()) return true;
+  const trimmed = url.trim();
+  // Starts or ends with % (e.g. %Bild%, %%Bild%%, %Fahrzeugbild%)
+  if (trimmed.startsWith('%') || trimmed.endsWith('%')) return true;
+  if (trimmed.toLowerCase().includes('platzhalter') || trimmed.toLowerCase().includes('placeholder')) return true;
+  // Does not start with http/https, root slash or data URI
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('/') && !trimmed.startsWith('data:')) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Formats a placeholder tag for 4:3 graphic placeholder boxes.
+ * Guaranteed format: %% bezeichnung (e.g. '%%Bild%%', '%%Fahrzeugbild%%', '%%bezeichnung%%').
+ */
+export function formatPlaceholderTag(rawUrl?: string, defaultTag = 'Bild'): string {
+  if (!rawUrl || !rawUrl.trim()) {
+    return `%%${defaultTag}%%`;
+  }
+  const trimmed = rawUrl.trim();
+
+  // If already formatted with %%...%%
+  if (trimmed.startsWith('%%') && trimmed.endsWith('%%') && trimmed.length > 4) {
+    return trimmed;
+  }
+
+  // If single % at start and end e.g. %Bild% -> %%Bild%%
+  if (trimmed.startsWith('%') && trimmed.endsWith('%') && trimmed.length > 2) {
+    const inner = trimmed.slice(1, -1).trim();
+    return `%%${inner}%%`;
+  }
+
+  // If it's a plain word (no slash, no dot, no http)
+  if (!trimmed.includes('/') && !trimmed.includes('.') && !trimmed.includes(':')) {
+    return `%%${trimmed}%%`;
+  }
+
+  return `%%${defaultTag}%%`;
 }

@@ -75,6 +75,7 @@ export default function App() {
   const [copied, setCopied] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isDraggingBrick, setIsDraggingBrick] = useState<boolean>(false);
+  const [draggedBrickType, setDraggedBrickType] = useState<NodeType | null>(null);
 
   // Toggle warning notifications
   const [warningNotifications, setWarningNotifications] = useState<boolean>(() => {
@@ -157,6 +158,16 @@ export default function App() {
     setNodes((prev) => [...prev, newNode]);
     setSelectedNodeId(newNode.id);
     showToast(`Baustein "${type}" hinzugefügt`);
+  };
+
+  const handleInsertBrickAtIndex = (type: NodeType, targetIndex: number) => {
+    const newNode = createNewNode(type);
+    const updated = [...nodes];
+    const safeIndex = Math.max(0, Math.min(targetIndex, updated.length));
+    updated.splice(safeIndex, 0, newNode);
+    setNodes(updated);
+    setSelectedNodeId(newNode.id);
+    showToast(`Baustein "${type}" eingefügt`);
   };
 
   const handleUpdateNode = (updatedNode: NewsletterNode) => {
@@ -248,7 +259,10 @@ export default function App() {
           >
             <BricksPalette
               onAddBrick={handleAddBrick}
-              onDragStateChange={(dragging) => setIsDraggingBrick(dragging)}
+              onDragStateChange={(dragging, type) => {
+                setIsDraggingBrick(dragging);
+                setDraggedBrickType(dragging ? (type || null) : null);
+              }}
             />
           </div>
 
@@ -271,6 +285,7 @@ export default function App() {
               primaryColor={company.primaryColor}
               onResetNodes={handleResetToDefault}
               isDraggingExternal={isDraggingBrick}
+              draggedBrickType={draggedBrickType}
             />
           </div>
 
@@ -293,6 +308,9 @@ export default function App() {
               warningNotifications={warningNotifications}
               onToggleWarningNotifications={handleToggleWarningNotifications}
               onToggleSecurityNotice={handleToggleSecurityNotice}
+              isDraggingExternal={isDraggingBrick}
+              draggedBrickType={draggedBrickType}
+              onInsertBrickAtIndex={handleInsertBrickAtIndex}
             />
           </div>
         </div>

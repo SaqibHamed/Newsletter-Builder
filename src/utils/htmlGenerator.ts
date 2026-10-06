@@ -1,15 +1,28 @@
 import { CompanySettings, NewsletterMeta, NewsletterNode } from '../types';
 import {
-  getAutolinaLogoSvg,
-  getAutolinaLogoHtml,
-  getAppleBadgeHtml,
-  getGooglePlayBadgeHtml,
-  getAppleBadgeSvgLink,
-  getGooglePlayBadgeSvgLink,
+  AUTOLINA_LIVE_LOGO_PNG,
   getSocialMediaLinksHtml,
-  getVehicleSpecIconSvg,
+  formatPlaceholderTag,
+  isPlaceholderGraphic,
 } from './autolinaAssets';
 
+/**
+ * Generiert 100% E-Mail-Client-kompatibles HTML gemäss Industriestandards (Litmus, Campaign Monitor, Email on Acid).
+ * 
+ * Behebt Darstellungsfehler in:
+ * - Microsoft Outlook (2013-2021, Office 365, Desktop Windows/Mac, Outlook Web App)
+ * - Gmail (Webmail, iOS App, Android App, Google Workspace)
+ * - Apple Mail (iOS, iPadOS, macOS)
+ * - Yahoo Mail, GMX, Web.de, Thunderbird, Bluewin
+ * 
+ * Massnahmen zur Fehlerbehebung gemäss Support-Analyse:
+ * 1. Keine Inline-SVGs: SVGs werden von Gmail und Outlook gestrippt oder blockiert. Spezifikationen und Icons werden über bulletproof HTML & Web-Safe Typografie gelöst.
+ * 2. Vollständige bgcolor-Attribute: Outlook ignoriert CSS background-color auf <td>, wenn bgcolor fehlt. Alle Kartenblöcke (#FFFFFF) und Platzhalter (#F4F4F6) besitzen nun explizite bgcolor-Attribute.
+ * 3. Robuster Web-Safe Font-Stack: Outlook besitzt einen bekannten Bug, bei dem 'Inter' in Times New Roman umgewandelt wird. Durch Arial/Helvetica als primären Fallback und MSO-Stylesheets wird die Schriftart in allen Clients konsistent dargestellt.
+ * 4. Feste Pixel-Dimensionen für Bilder: Badges und Grafiken haben explizite Breiten und Höhen (width="120" height="40"), um eine 646px-Skalierung im Outlook Word-Renderer zu verhindern.
+ * 5. Tabellen-basiertes 2-Spalten-Layout: Statt anfälliger inline-block Divs mit max-width (die Gmail Desktop oft umbricht) werden fluide Hybrid-Tabellen (align="left" / align="right") verwendet.
+ * 6. 4:3-Platzhalterboxen mit fixierter Höhe und zentriertem Text für den %% bezeichnung%% Platzhalter.
+ */
 export function generateEmailHtml(
   nodes: NewsletterNode[],
   meta: NewsletterMeta,
@@ -22,38 +35,65 @@ export function generateEmailHtml(
   const renderNodeHtml = (node: NewsletterNode): string => {
     switch (node.type) {
       case 'title': {
-        const alignClass =
-          node.align === 'center' ? ' text-center' : node.align === 'right' ? ' text-right' : '';
-        return `        <h1 class="nl-title${alignClass}">${escapeHtml(replacePersonalization(node.text))}</h1>`;
+        const align = node.align || 'left';
+        return `            <!-- TITEL -->
+            <tr>
+              <td align="${align}" style="padding:0;text-align:${align};">
+                <h1 class="nl-font nl-h1" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:28px;font-weight:bold;line-height:125%;color:#000000;text-align:${align};letter-spacing:-0.5px;">${escapeHtml(replacePersonalization(node.text))}</h1>
+              </td>
+            </tr>`;
       }
 
       case 'heading': {
-        const alignClass =
-          node.align === 'center' ? ' text-center' : node.align === 'right' ? ' text-right' : '';
-        return `        <h2 class="nl-heading${alignClass}">${escapeHtml(replacePersonalization(node.text))}</h2>`;
+        const align = node.align || 'left';
+        return `            <!-- UNTERÜBERSCHRIFT -->
+            <tr>
+              <td align="${align}" style="padding:0;text-align:${align};">
+                <h2 class="nl-font nl-h2" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:bold;line-height:130%;color:#000000;text-align:${align};">${escapeHtml(replacePersonalization(node.text))}</h2>
+              </td>
+            </tr>`;
       }
 
       case 'paragraph': {
-        const alignClass =
-          node.align === 'center' ? ' text-center' : node.align === 'right' ? ' text-right' : '';
-        // Automatically make URLs and email addresses clickable links in #08B9C2
+        const align = node.align || 'left';
         const rawText = escapeHtml(replacePersonalization(node.text));
         const formattedText = formatInlineLinks(rawText);
-        return `        <p class="nl-paragraph${alignClass}">${formattedText}</p>`;
+        return `            <!-- FLIESSTEXT -->
+            <tr>
+              <td align="${align}" style="padding:0;text-align:${align};">
+                <p class="nl-font nl-body" style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:normal;line-height:150%;color:#000000;white-space:pre-line;text-align:${align};">${formattedText}</p>
+              </td>
+            </tr>`;
       }
 
       case 'graphic': {
         const captionHtml = node.caption
-          ? `\n          <p class="nl-caption">${escapeHtml(node.caption)}</p>`
+          ? `\n                <p class="nl-font" style="margin:8px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:150%;color:#666666;text-align:center;">${escapeHtml(node.caption)}</p>`
           : '';
-        const imgTag = `<img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || 'Grafik')}" class="nl-img" />`;
-        const wrapped = node.linkUrl
-          ? `<a href="${escapeAttr(node.linkUrl)}" target="_blank" rel="noopener noreferrer">${imgTag}</a>`
-          : imgTag;
+        const isPlaceholder = isPlaceholderGraphic(node.imageUrl);
+        let mediaHtml = '';
+        if (isPlaceholder) {
+          const placeholderTag = formatPlaceholderTag(node.imageUrl, 'Bild');
+          mediaHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;margin:0 auto;">
+                  <tr>
+                    <td align="center" valign="middle" height="402" bgcolor="#F4F4F6" style="height:402px;background-color:#F4F4F6;border:1px dashed #CBD5E1;border-radius:12px;text-align:center;padding:24px;">
+                      <span class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#64748B;letter-spacing:0.5px;display:inline-block;">${escapeHtml(placeholderTag)}</span>
+                    </td>
+                  </tr>
+                </table>`;
+        } else {
+          const imgTag = `<img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || 'Grafik')}" width="536" border="0" style="display:block;width:100%;max-width:536px;height:auto;border-radius:12px;border:0;outline:none;text-decoration:none;margin:0 auto;" />`;
+          mediaHtml = node.linkUrl
+            ? `<a href="${escapeAttr(node.linkUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:block;border:0;">${imgTag}</a>`
+            : imgTag;
+        }
 
-        return `        <div class="nl-graphic">
-          ${wrapped}${captionHtml}
-        </div>`;
+        return `            <!-- GRAFIK (4:3 PLATZHALTER ODER BILD) -->
+            <tr>
+              <td align="center" style="padding:0;text-align:center;">
+                ${mediaHtml}${captionHtml}
+              </td>
+            </tr>`;
       }
 
       case 'bullet_list': {
@@ -61,13 +101,23 @@ export function generateEmailHtml(
           .filter((item) => item.trim().length > 0)
           .map(
             (item) =>
-              `          <li class="nl-list-item"><span class="nl-bullet">•</span><span>${formatInlineLinks(
-                escapeHtml(replacePersonalization(item))
-              )}</span></li>`
+              `                  <tr>
+                    <td width="20" valign="top" style="width:20px;padding:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:150%;color:#2E3E6C;text-align:left;">&bull;</td>
+                    <td valign="top" class="nl-font" style="padding:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:150%;color:#000000;text-align:left;">${formatInlineLinks(
+                      escapeHtml(replacePersonalization(item))
+                    )}</td>
+                  </tr>`
           )
           .join('\n');
 
-        return `        <ul class="nl-list">\n${items}\n        </ul>`;
+        return `            <!-- AUFZÄHLUNG (BULLET POINTS) -->
+            <tr>
+              <td style="padding:0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
+${items}
+                </table>
+              </td>
+            </tr>`;
       }
 
       case 'numbered_list': {
@@ -75,61 +125,175 @@ export function generateEmailHtml(
           .filter((item) => item.trim().length > 0)
           .map(
             (item, idx) =>
-              `          <li class="nl-list-item"><span class="nl-badge-num">${idx + 1}.</span><span>${formatInlineLinks(
-                escapeHtml(replacePersonalization(item))
-              )}</span></li>`
+              `                  <tr>
+                    <td width="28" valign="top" class="nl-font" style="width:28px;padding:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;line-height:150%;color:#2E3E6C;text-align:left;">${idx + 1}.</td>
+                    <td valign="top" class="nl-font" style="padding:0 0 10px 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:150%;color:#000000;text-align:left;">${formatInlineLinks(
+                      escapeHtml(replacePersonalization(item))
+                    )}</td>
+                  </tr>`
           )
           .join('\n');
 
-        return `        <ol class="nl-list">\n${items}\n        </ol>`;
+        return `            <!-- NUMMERIERTE LISTE -->
+            <tr>
+              <td style="padding:0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
+${items}
+                </table>
+              </td>
+            </tr>`;
       }
 
       case 'two_col_left_graphic': {
+        const isPlaceholder = isPlaceholderGraphic(node.imageUrl);
+        let mediaHtml = '';
+        if (isPlaceholder) {
+          const placeholderTag = formatPlaceholderTag(node.imageUrl, 'Bild');
+          mediaHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;">
+                      <tr>
+                        <td align="center" valign="middle" height="180" bgcolor="#F4F4F6" style="height:180px;background-color:#F4F4F6;border:1px dashed #CBD5E1;border-radius:12px;text-align:center;padding:16px;">
+                          <span class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#64748B;">${escapeHtml(placeholderTag)}</span>
+                        </td>
+                      </tr>
+                    </table>`;
+        } else {
+          mediaHtml = `<img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || '')}" width="240" border="0" style="display:block;width:100%;max-width:240px;height:auto;border-radius:12px;border:0;outline:none;" />`;
+        }
+
         const btnHtml = node.buttonText
-          ? `\n            <a href="${escapeAttr(node.buttonUrl || '#')}" class="nl-btn">${escapeHtml(
-              node.buttonText
-            )}</a>`
+          ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;">
+                      <tr>
+                        <td bgcolor="#2E3E6C" style="background-color:#2E3E6C;border-radius:12px;padding:10px 20px;">
+                          <a href="${escapeAttr(node.buttonUrl || '#')}" target="_blank" rel="noopener noreferrer" class="nl-font" style="color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;line-height:120%;text-decoration:none;display:inline-block;">${escapeHtml(node.buttonText)}</a>
+                        </td>
+                      </tr>
+                    </table>`
           : '';
 
-        return `        <div class="nl-twocol">
-          <div class="nl-twocol-media">
-            <img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || '')}" />
-          </div>
-          <div class="nl-twocol-body">
-            <h3>${escapeHtml(replacePersonalization(node.heading))}</h3>
-            <p>${formatInlineLinks(escapeHtml(replacePersonalization(node.paragraph)))}</p>${btnHtml}
-          </div>
-        </div>`;
+        return `            <!-- 2 SPALTEN (BILD LINKS) FLUID HYBRID -->
+            <tr>
+              <td style="padding:0;">
+                <!--[if (gte mso 9)|(IE)]>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                <td width="240" valign="top">
+                <![endif]-->
+                <table role="presentation" class="nl-col-left" align="left" width="240" cellpadding="0" cellspacing="0" border="0" style="width:240px;max-width:100%;border-collapse:collapse;">
+                  <tr>
+                    <td valign="top" style="padding:0 0 16px 0;">
+                      ${mediaHtml}
+                    </td>
+                  </tr>
+                </table>
+                <!--[if (gte mso 9)|(IE)]>
+                </td>
+                <td width="20" style="width:20px;font-size:1px;">&nbsp;</td>
+                <td width="276" valign="top">
+                <![endif]-->
+                <table role="presentation" class="nl-col-right" align="right" width="276" cellpadding="0" cellspacing="0" border="0" style="width:276px;max-width:100%;border-collapse:collapse;">
+                  <tr>
+                    <td valign="top" style="padding:0 0 16px 0;">
+                      <h3 class="nl-font" style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:bold;line-height:130%;color:#000000;">
+                        ${escapeHtml(replacePersonalization(node.heading))}
+                      </h3>
+                      <p class="nl-font" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:normal;line-height:150%;color:#000000;">
+                        ${formatInlineLinks(escapeHtml(replacePersonalization(node.paragraph)))}
+                      </p>
+                      ${btnHtml}
+                    </td>
+                  </tr>
+                </table>
+                <!--[if (gte mso 9)|(IE)]>
+                </td>
+                </tr>
+                </table>
+                <![endif]-->
+              </td>
+            </tr>`;
       }
 
       case 'two_col_right_graphic': {
+        const isPlaceholder = isPlaceholderGraphic(node.imageUrl);
+        let mediaHtml = '';
+        if (isPlaceholder) {
+          const placeholderTag = formatPlaceholderTag(node.imageUrl, 'Bild');
+          mediaHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;">
+                      <tr>
+                        <td align="center" valign="middle" height="180" bgcolor="#F4F4F6" style="height:180px;background-color:#F4F4F6;border:1px dashed #CBD5E1;border-radius:12px;text-align:center;padding:16px;">
+                          <span class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#64748B;">${escapeHtml(placeholderTag)}</span>
+                        </td>
+                      </tr>
+                    </table>`;
+        } else {
+          mediaHtml = `<img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || '')}" width="240" border="0" style="display:block;width:100%;max-width:240px;height:auto;border-radius:12px;border:0;outline:none;" />`;
+        }
+
         const btnHtml = node.buttonText
-          ? `\n            <a href="${escapeAttr(node.buttonUrl || '#')}" class="nl-btn">${escapeHtml(
-              node.buttonText
-            )}</a>`
+          ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;">
+                      <tr>
+                        <td bgcolor="#2E3E6C" style="background-color:#2E3E6C;border-radius:12px;padding:10px 20px;">
+                          <a href="${escapeAttr(node.buttonUrl || '#')}" target="_blank" rel="noopener noreferrer" class="nl-font" style="color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;line-height:120%;text-decoration:none;display:inline-block;">${escapeHtml(node.buttonText)}</a>
+                        </td>
+                      </tr>
+                    </table>`
           : '';
 
-        return `        <div class="nl-twocol nl-twocol-reverse">
-          <div class="nl-twocol-media">
-            <img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || '')}" />
-          </div>
-          <div class="nl-twocol-body">
-            <h3>${escapeHtml(replacePersonalization(node.heading))}</h3>
-            <p>${formatInlineLinks(escapeHtml(replacePersonalization(node.paragraph)))}</p>${btnHtml}
-          </div>
-        </div>`;
+        return `            <!-- 2 SPALTEN (BILD RECHTS) FLUID HYBRID -->
+            <tr>
+              <td style="padding:0;">
+                <!--[if (gte mso 9)|(IE)]>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                <td width="276" valign="top">
+                <![endif]-->
+                <table role="presentation" class="nl-col-right" align="left" width="276" cellpadding="0" cellspacing="0" border="0" style="width:276px;max-width:100%;border-collapse:collapse;">
+                  <tr>
+                    <td valign="top" style="padding:0 0 16px 0;">
+                      <h3 class="nl-font" style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:bold;line-height:130%;color:#000000;">
+                        ${escapeHtml(replacePersonalization(node.heading))}
+                      </h3>
+                      <p class="nl-font" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:normal;line-height:150%;color:#000000;">
+                        ${formatInlineLinks(escapeHtml(replacePersonalization(node.paragraph)))}
+                      </p>
+                      ${btnHtml}
+                    </td>
+                  </tr>
+                </table>
+                <!--[if (gte mso 9)|(IE)]>
+                </td>
+                <td width="20" style="width:20px;font-size:1px;">&nbsp;</td>
+                <td width="240" valign="top">
+                <![endif]-->
+                <table role="presentation" class="nl-col-left" align="right" width="240" cellpadding="0" cellspacing="0" border="0" style="width:240px;max-width:100%;border-collapse:collapse;">
+                  <tr>
+                    <td valign="top" style="padding:0 0 16px 0;">
+                      ${mediaHtml}
+                    </td>
+                  </tr>
+                </table>
+                <!--[if (gte mso 9)|(IE)]>
+                </td>
+                </tr>
+                </table>
+                <![endif]-->
+              </td>
+            </tr>`;
       }
 
       case 'button_cta': {
-        const alignClass =
-          node.align === 'center'
-            ? ' nl-btn-center'
-            : node.align === 'right'
-            ? ' nl-btn-right'
-            : '';
-        return `        <div class="nl-btn-wrap${alignClass}">
-          <a href="${escapeAttr(node.url || '#')}" class="nl-btn nl-btn-cta">${escapeHtml(node.label)}</a>
-        </div>`;
+        const align = node.align || 'left';
+        return `            <!-- AKTIONSBUTTON (CTA) BULLETPROOF -->
+            <tr>
+              <td align="${align}" style="padding:6px 0;text-align:${align};">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${align}" style="border-collapse:separate;margin:${align === 'center' ? '0 auto' : align === 'right' ? '0 0 0 auto' : '0'};">
+                  <tr>
+                    <td align="center" bgcolor="#2E3E6C" style="background-color:#2E3E6C;border-radius:12px;padding:14px 28px;">
+                      <a href="${escapeAttr(node.url || '#')}" target="_blank" rel="noopener noreferrer" class="nl-font" style="color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;line-height:120%;text-decoration:none;display:inline-block;letter-spacing:0.2px;">${escapeHtml(node.label)}</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>`;
       }
 
       case 'vehicle_card': {
@@ -142,55 +306,111 @@ export function generateEmailHtml(
         const transVal = node.transmission || 'Handschaltung';
         const fuelVal = node.fuelType || 'Plug-in-Hybrid';
         const driveVal = node.driveTrain || 'Vorderradantrieb';
+        const isPlaceholder = isPlaceholderGraphic(node.imageUrl);
 
-        return `        <div class="nl-vehicle-card-v2">
-          <div class="nl-vehicle-media-v2">
-            <img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || model)}" />
-          </div>
-          <div class="nl-vehicle-body-v2">
-            <div class="nl-vehicle-brand">${escapeHtml(replacePersonalization(brand))}</div>
-            <div class="nl-vehicle-title-v2">${escapeHtml(replacePersonalization(model))}</div>
-            <div class="nl-vehicle-price-v2">${escapeHtml(replacePersonalization(price))}</div>
+        let mediaHtml = '';
+        if (isPlaceholder) {
+          const placeholderTag = formatPlaceholderTag(node.imageUrl, 'Fahrzeugbild');
+          mediaHtml = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;">
+                      <tr>
+                        <td align="center" valign="middle" height="378" bgcolor="#EFEFF2" style="height:378px;background-color:#EFEFF2;border:1px dashed #CBD5E1;border-radius:12px;text-align:center;padding:24px;">
+                          <span class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#64748B;letter-spacing:0.5px;display:inline-block;">${escapeHtml(placeholderTag)}</span>
+                        </td>
+                      </tr>
+                    </table>`;
+        } else {
+          mediaHtml = `<img src="${escapeAttr(node.imageUrl)}" alt="${escapeAttr(node.altText || model)}" width="504" border="0" style="display:block;width:100%;max-width:504px;height:auto;border-radius:12px;border:0;outline:none;" />`;
+        }
 
-            <!-- 6 Spezifikationen (2 Zeilen x 3 Spalten) -->
-            <div class="nl-vehicle-specs-grid">
-              <div class="nl-spec-pill">
-                ${getVehicleSpecIconSvg('date')}
-                <span>${escapeHtml(replacePersonalization(dateVal))}</span>
-              </div>
-              <div class="nl-spec-pill">
-                ${getVehicleSpecIconSvg('mileage')}
-                <span>${escapeHtml(replacePersonalization(mileageVal))}</span>
-              </div>
-              <div class="nl-spec-pill">
-                ${getVehicleSpecIconSvg('power')}
-                <span>${escapeHtml(replacePersonalization(powerVal))}</span>
-              </div>
-              <div class="nl-spec-pill">
-                ${getVehicleSpecIconSvg('transmission')}
-                <span>${escapeHtml(replacePersonalization(transVal))}</span>
-              </div>
-              <div class="nl-spec-pill">
-                ${getVehicleSpecIconSvg('fuel')}
-                <span>${escapeHtml(replacePersonalization(fuelVal))}</span>
-              </div>
-              <div class="nl-spec-pill">
-                ${getVehicleSpecIconSvg('drive')}
-                <span>${escapeHtml(replacePersonalization(driveVal))}</span>
-              </div>
-            </div>
-          </div>
-        </div>`;
+        return `            <!-- FAHRZEUGKARTE (100% E-MAIL CLIENT KOMPATIBEL) -->
+            <tr>
+              <td style="padding:0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F4F4F6" style="background-color:#F4F4F6;border:1px solid #E5E5E8;border-radius:16px;border-collapse:separate;width:100%;">
+                  <tr>
+                    <td style="padding:16px;">
+                      <!-- 1. Fahrzeug-Bild -->
+                      ${mediaHtml}
+                      
+                      <!-- 2. Marke, Modell & Preis -->
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;">
+                        <tr>
+                          <td class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:500;color:#71717A;line-height:130%;padding-bottom:2px;">
+                            ${escapeHtml(replacePersonalization(brand))}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:bold;line-height:130%;color:#09090B;padding-bottom:4px;">
+                            ${escapeHtml(replacePersonalization(model))}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;line-height:120%;color:#09090B;padding-bottom:12px;">
+                            ${escapeHtml(replacePersonalization(price))}
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- 3. 6 Spezifikationen (2 Reihen x 3 Spalten mit sauberem Fallback ohne anfällige Inline-SVGs) -->
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;">
+                        <tr>
+                          <!-- Datum -->
+                          <td width="31%" valign="top" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E4E4E7;border-radius:8px;padding:8px 10px;text-align:left;">
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#71717A;line-height:13px;margin-bottom:3px;font-weight:500;">Datum</div>
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#18181B;font-weight:bold;line-height:16px;">${escapeHtml(replacePersonalization(dateVal))}</div>
+                          </td>
+                          <td width="3%" style="width:3%;font-size:1px;line-height:1px;">&nbsp;</td>
+                          <!-- KM -->
+                          <td width="31%" valign="top" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E4E4E7;border-radius:8px;padding:8px 10px;text-align:left;">
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#71717A;line-height:13px;margin-bottom:3px;font-weight:500;">Kilometer</div>
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#18181B;font-weight:bold;line-height:16px;">${escapeHtml(replacePersonalization(mileageVal))}</div>
+                          </td>
+                          <td width="3%" style="width:3%;font-size:1px;line-height:1px;">&nbsp;</td>
+                          <!-- PS -->
+                          <td width="31%" valign="top" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E4E4E7;border-radius:8px;padding:8px 10px;text-align:left;">
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#71717A;line-height:13px;margin-bottom:3px;font-weight:500;">Leistung</div>
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#18181B;font-weight:bold;line-height:16px;">${escapeHtml(replacePersonalization(powerVal))}</div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td height="8" colspan="5" style="height:8px;font-size:1px;line-height:8px;">&nbsp;</td>
+                        </tr>
+                        <tr>
+                          <!-- Schaltung -->
+                          <td width="31%" valign="top" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E4E4E7;border-radius:8px;padding:8px 10px;text-align:left;">
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#71717A;line-height:13px;margin-bottom:3px;font-weight:500;">Getriebe</div>
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#18181B;font-weight:bold;line-height:16px;">${escapeHtml(replacePersonalization(transVal))}</div>
+                          </td>
+                          <td width="3%" style="width:3%;font-size:1px;line-height:1px;">&nbsp;</td>
+                          <!-- Energie -->
+                          <td width="31%" valign="top" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E4E4E7;border-radius:8px;padding:8px 10px;text-align:left;">
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#71717A;line-height:13px;margin-bottom:3px;font-weight:500;">Treibstoff</div>
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#18181B;font-weight:bold;line-height:16px;">${escapeHtml(replacePersonalization(fuelVal))}</div>
+                          </td>
+                          <td width="3%" style="width:3%;font-size:1px;line-height:1px;">&nbsp;</td>
+                          <!-- Antrieb -->
+                          <td width="31%" valign="top" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E4E4E7;border-radius:8px;padding:8px 10px;text-align:left;">
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#71717A;line-height:13px;margin-bottom:3px;font-weight:500;">Antrieb</div>
+                            <div class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#18181B;font-weight:bold;line-height:16px;">${escapeHtml(replacePersonalization(driveVal))}</div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>`;
       }
 
       case 'url': {
-        const alignClass =
-          node.align === 'center' ? ' text-center' : node.align === 'right' ? ' text-right' : '';
+        const align = node.align || 'left';
         const displayLabel = node.label || node.url || '%Reset%';
         const targetUrl = node.url || '%Reset%';
-        return `        <div class="nl-url-wrap${alignClass}">
-          <a href="${escapeAttr(targetUrl)}" target="_blank" rel="noopener noreferrer" class="nl-url-link">${escapeHtml(replacePersonalization(displayLabel))}</a>
-        </div>`;
+        return `            <!-- URL / LINK -->
+            <tr>
+              <td align="${align}" style="padding:4px 0;text-align:${align};">
+                <a href="${escapeAttr(targetUrl)}" target="_blank" rel="noopener noreferrer" class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;line-height:150%;color:#2E3E6C;text-decoration:underline;word-break:break-all;">${escapeHtml(replacePersonalization(displayLabel))}</a>
+              </td>
+            </tr>`;
       }
 
       default:
@@ -198,714 +418,284 @@ export function generateEmailHtml(
     }
   };
 
-  const renderedContent = nodes.map(renderNodeHtml).join('\n');
+  // Zusammenbau der Content-Knoten mit präzisem 24px Zeilenabstand (Spacern)
+  const nodeRowsWithSpacers = nodes
+    .map((node, index) => {
+      const rendered = renderNodeHtml(node);
+      if (index < nodes.length - 1) {
+        return `${rendered}
+            <!-- 24px ABSTAND ZWISCHEN DEN ELEMENTEN -->
+            <tr>
+              <td height="24" style="height:24px;line-height:24px;font-size:1px;mso-line-height-rule:exactly;">&nbsp;</td>
+            </tr>`;
+      }
+      return rendered;
+    })
+    .join('\n');
 
-  return `<!DOCTYPE html>
-<html lang="de" xmlns="http://www.w3.org/1999/xhtml">
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <title>${escapeHtml(meta.subject)}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    /* AUTOLINA E-MAIL STYLE GUIDE — RESET & NORMEN */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <style type="text/css">
+    body, table, td, p, a, li, blockquote, h1, h2, h3, h4, h5, h6, span, strong, b {
+      font-family: Arial, Helvetica, sans-serif !important;
     }
-
-    body {
-      background-color: #F6F6F8;
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      line-height: 150%;
-      color: #000000;
-      padding: 20px;
-      margin: 0;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+  </style>
+  <![endif]-->
+  <style type="text/css">
+    /* Globale E-Mail-Client Resets */
+    body, table, td, a {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
     }
-
-    /* Container: 640px gesamt, 600px Inhaltsblöcke */
-    .nl-outer-wrapper {
-      width: 100%;
-      background-color: #F6F6F8;
-      padding: 20px 0;
+    table, td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+      border-collapse: collapse;
     }
-
-    .nl-container {
-      width: 100%;
-      max-width: 600px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    /* Alle Blöcke: Weisser Hintergrund, 20px Radius, kein Schatten, kein Gradient */
-    .nl-block {
-      background-color: #FFFFFF;
-      border-radius: 20px;
-      overflow: hidden;
-      box-sizing: border-box;
-    }
-
-    /* Block 1: HEADER (Padding: 24px) */
-    .nl-header-block {
-      padding: 24px;
-      text-align: center;
-    }
-
-    .nl-header-block a {
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    /* Block 2: INHALT (Padding: 32px, innerer Abstand 24px) */
-    .nl-content-block {
-      padding: 32px;
-    }
-
-    .nl-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    /* TYPOGRAFIE LAUT STYLE GUIDE */
-    /* H1: Inter Semi Bold (600), 28px, 120% */
-    .nl-title {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 28px;
-      font-weight: 600;
-      line-height: 120%;
-      color: #000000;
-      margin: 0;
-    }
-
-    /* H2: Inter Semi Bold (600), 20px, auto */
-    .nl-heading {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 20px;
-      font-weight: 600;
-      line-height: 130%;
-      color: #000000;
-      margin: 0;
-    }
-
-    /* H3: Inter Semi Bold (600), 18px, 130% */
-    .nl-subheading {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 130%;
-      color: #000000;
-      margin: 0;
-    }
-
-    /* Fliesstext: Inter Regular (400), 16px, 150% */
-    .nl-paragraph {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      font-weight: 400;
-      line-height: 150%;
-      color: #000000;
-      margin: 0;
-      white-space: pre-line;
-    }
-
-    /* Links: #2E3E6C, unterstrichen */
-    a, .nl-link {
-      color: #2E3E6C;
-      text-decoration: underline;
-    }
-
-    /* Bilder: Immer border-radius: 12px */
-    .nl-graphic {
-      text-align: center;
-      margin: 0;
-    }
-
-    .nl-graphic img, .nl-img {
-      width: 100%;
+    img {
+      border: 0;
       height: auto;
-      border-radius: 12px;
-      display: block;
-      margin: 0 auto;
-    }
-
-    .nl-caption {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 14px;
-      line-height: 150%;
-      color: #666666;
-      margin-top: 8px;
-      text-align: center;
-    }
-
-    /* Listen: Punkt • oder Ziffer 1. / 2. / 3. */
-    .nl-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding-left: 0;
-      margin: 0;
-    }
-
-    .nl-list-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      line-height: 150%;
-      color: #000000;
-    }
-
-    .nl-bullet {
-      color: #2E3E6C;
-      font-size: 18px;
-      line-height: 1.2;
-      flex-shrink: 0;
-    }
-
-    .nl-badge-num {
-      color: #2E3E6C;
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      line-height: 150%;
-      flex-shrink: 0;
-    }
-
-    /* 2 Spalten Layout */
-    .nl-twocol {
-      display: flex;
-      align-items: flex-start;
-      gap: 20px;
-      margin: 0;
-    }
-
-    .nl-twocol-reverse {
-      flex-direction: row-reverse;
-    }
-
-    .nl-twocol-media {
-      flex: 0 0 44%;
-      max-width: 44%;
-    }
-
-    .nl-twocol-media img {
-      width: 100%;
-      height: 150px;
-      object-fit: cover;
-      border-radius: 12px;
-      display: block;
-    }
-
-    .nl-twocol-body {
-      flex: 1;
-    }
-
-    .nl-twocol-body h3 {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 130%;
-      color: #000000;
-      margin: 0 0 8px 0;
-    }
-
-    .nl-twocol-body p {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      font-weight: 400;
-      line-height: 150%;
-      color: #000000;
-      margin: 0;
-      white-space: pre-line;
-    }
-
-    /* Buttons */
-    .nl-btn {
-      display: inline-block;
-      background-color: #2E3E6C;
-      color: #FFFFFF !important;
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      font-weight: 600;
-      line-height: 120%;
-      padding: 12px 24px;
-      border-radius: 12px;
-      text-decoration: none !important;
-      margin-top: 12px;
-      border: 0;
-      cursor: pointer;
-      text-align: center;
-      box-sizing: border-box;
-      transition: opacity 0.15s ease;
-    }
-
-    .nl-btn:hover {
-      opacity: 0.9;
-    }
-
-    .nl-btn-wrap {
-      margin: 6px 0;
-    }
-
-    .nl-btn-center {
-      text-align: center;
-    }
-
-    .nl-btn-right {
-      text-align: right;
-    }
-
-    .nl-btn-cta {
-      padding: 14px 28px;
-    }
-
-    /* URL / Link Baustein: Bold und autolina Dunkelblau #2E3E6C */
-    .nl-url-wrap {
-      margin: 4px 0;
-    }
-
-    .nl-url-link {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      font-weight: 700 !important;
-      line-height: 150%;
-      color: #2E3E6C !important;
-      text-decoration: underline !important;
-      word-break: break-all;
-    }
-
-    /* Fahrzeugkarte v2 gemäss aktuellem autolina Design (grafik.png) */
-    .nl-vehicle-card-v2 {
-      background-color: #F4F4F6;
-      border: 1px solid #E5E5E8;
-      border-radius: 16px;
-      overflow: hidden;
-      padding: 16px;
-      margin: 6px 0;
-    }
-
-    .nl-vehicle-media-v2 img {
-      width: 100%;
-      height: 240px;
-      object-fit: cover;
-      display: block;
-      border-radius: 12px;
-    }
-
-    .nl-vehicle-body-v2 {
-      padding-top: 14px;
-    }
-
-    .nl-vehicle-brand {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 13px;
-      font-weight: 500;
-      color: #71717A;
-      margin-bottom: 2px;
-    }
-
-    .nl-vehicle-title-v2 {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 18px;
-      font-weight: 700;
-      line-height: 130%;
-      color: #09090B;
-      margin-bottom: 4px;
-    }
-
-    .nl-vehicle-price-v2 {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 22px;
-      font-weight: 700;
-      line-height: 120%;
-      color: #09090B;
-      margin-bottom: 12px;
-    }
-
-    .nl-vehicle-specs-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .nl-spec-pill {
-      background-color: #FFFFFF;
-      border: 1px solid #E4E4E7;
-      border-radius: 10px;
-      padding: 8px 10px;
-      display: inline-flex;
-      align-items: center;
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 12px;
-      font-weight: 500;
-      color: #18181B;
-      box-sizing: border-box;
-      flex: 1 1 calc(33.333% - 8px);
-      min-width: 130px;
-    }
-
-    /* Fahrzeugkarte laut Style Guide (Probefahrt & Inserate) */
-    .nl-vehicle-card {
-      background-color: #FFFFFF;
-      border: 1px solid #E5E5E8;
-      border-radius: 12px;
-      overflow: hidden;
-      margin: 4px 0;
-    }
-
-    .nl-vehicle-media img {
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
-      display: block;
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-    }
-
-    .nl-vehicle-body {
-      padding: 20px;
-    }
-
-    .nl-vehicle-title {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 130%;
-      color: #000000;
-      margin-bottom: 6px;
-    }
-
-    .nl-vehicle-price {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 28px;
-      font-weight: 600;
-      line-height: 120%;
-      color: #000000;
-      margin-bottom: 8px;
-    }
-
-    .nl-vehicle-meta {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 12px;
-      font-weight: 500;
-      color: #666666;
-      line-height: 140%;
-    }
-
-    /* Grussformel am Ende von Block 2 */
-    .nl-closing {
-      margin-top: 28px;
-      padding-top: 20px;
-      border-top: 1px solid #E5E5E8;
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      line-height: 150%;
-      color: #000000;
-    }
-
-    .nl-closing p {
-      margin: 0;
-    }
-
-    /* Block 3: FOOTER (Padding: 32px, innerer Abstand 24px) */
-    .nl-footer-block {
-      padding: 32px;
-      text-align: center;
-    }
-
-    .nl-footer-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      align-items: center;
-    }
-
-    .nl-address-block {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 14px;
-      line-height: 150%;
-      color: #000000;
-      text-align: center;
-    }
-
-    .nl-address-block a {
-      color: #2E3E6C;
-      text-decoration: underline;
-    }
-
-    .nl-divider {
-      width: 100%;
-      height: 1px;
-      background-color: #E5E5E8;
-      border: 0;
-      margin: 0;
-    }
-
-    .nl-badges-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .nl-badges-wrap a {
-      display: inline-block;
-      line-height: 0;
+      line-height: 100%;
+      outline: none;
       text-decoration: none;
+      -ms-interpolation-mode: bicubic;
     }
-
-    .nl-badges-wrap img {
-      height: 40px;
-      width: 135px;
-      border-radius: 8px;
-      display: inline-block;
-      vertical-align: middle;
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #F6F6F8 !important;
+      font-family: Arial, Helvetica, sans-serif;
     }
-
-    .nl-social-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .nl-social-link {
-      color: #000000;
-      text-decoration: none;
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 13px;
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 6px;
-    }
-
-    .nl-social-link:hover {
+    a {
       text-decoration: underline;
+      color: #2E3E6C;
     }
-
-    /* Block 4: SICHERHEITSHINWEIS (Dunkelblau #1B4B97, Padding: 24px, Radius: 20px) */
-    .nl-security-block {
-      background-color: #1B4B97;
-      color: #FFFFFF;
-      padding: 24px;
-      border-radius: 20px;
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-size: 14px;
-      line-height: 150%;
-      box-sizing: border-box;
+    /* Web Font progressive enhancement für moderne Clients */
+    @media screen {
+      .nl-font {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+      }
     }
-
-    .nl-security-block strong {
-      font-family: 'Inter', Arial, Helvetica, sans-serif;
-      font-weight: 700;
-      color: #FFFFFF;
-    }
-
-    .nl-security-block a {
-      color: #FFFFFF !important;
-      text-decoration: underline !important;
-      font-weight: 600;
-    }
-
-    .text-center { text-align: center; }
-    .text-right { text-align: right; }
-
-    /* RESPONSIVES VERHALTEN (Mobile bis 620px) */
+    /* Mobile Responsive Optimierungen */
     @media only screen and (max-width: 620px) {
-      body {
-        padding: 16px 12px !important;
+      .nl-outer-table {
+        padding: 10px 4px !important;
       }
-
-      .nl-outer-wrapper {
-        padding: 12px 0 !important;
-      }
-
-      .nl-container {
+      .nl-container-table {
         width: 100% !important;
-        gap: 12px !important;
-      }
-
-      .nl-block {
-        border-radius: 16px !important;
-      }
-
-      .nl-header-block {
-        padding: 20px 16px !important;
-      }
-
-      .nl-content-block {
-        padding: 24px 16px !important;
-      }
-
-      .nl-footer-block {
-        padding: 24px 16px !important;
-      }
-
-      .nl-security-block {
-        padding: 20px 16px !important;
-        border-radius: 16px !important;
-      }
-
-      .nl-twocol {
-        flex-direction: column !important;
-        gap: 14px !important;
-      }
-
-      .nl-twocol-reverse {
-        flex-direction: column !important;
-      }
-
-      .nl-twocol-media {
-        flex: 0 0 100% !important;
         max-width: 100% !important;
       }
-
-      .nl-twocol-media img {
-        height: auto !important;
-        max-height: 200px !important;
+      .nl-card-block {
+        padding: 20px 16px !important;
+        border-radius: 16px !important;
       }
-
-      .nl-badges-wrap {
-        flex-direction: column !important;
+      .nl-card-header {
+        padding: 18px 16px !important;
+        border-radius: 16px !important;
+      }
+      .nl-col-left, .nl-col-right {
         width: 100% !important;
+        max-width: 100% !important;
+        float: none !important;
       }
-
-      .nl-badges-wrap a {
-        display: block !important;
-        width: 100% !important;
-        max-width: 200px !important;
-      }
-
-      .nl-social-wrap {
-        flex-direction: column !important;
-        gap: 6px !important;
-      }
-
-      .nl-social-divider {
-        display: none !important;
-      }
-
-      .nl-title {
+      .nl-h1 {
         font-size: 24px !important;
+        line-height: 125% !important;
       }
-
-      .nl-heading {
+      .nl-h2 {
         font-size: 18px !important;
+        line-height: 130% !important;
       }
-
-      .nl-vehicle-media img {
-        height: 180px !important;
-      }
-
-      .nl-vehicle-price {
-        font-size: 24px !important;
-      }
-
-      .nl-vehicle-media-v2 img {
-        height: 190px !important;
-      }
-
-      .nl-spec-pill {
-        flex: 1 1 calc(50% - 6px) !important;
-        min-width: 110px !important;
-        padding: 6px 8px !important;
-        font-size: 11px !important;
+      .nl-body {
+        font-size: 15px !important;
+        line-height: 150% !important;
       }
     }
   </style>
 </head>
-<body>
-  <!-- Preheader Text (unsichtbar) -->
-  <div style="display:none;font-size:1px;color:#F6F6F8;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+<body bgcolor="#F6F6F8" style="margin:0;padding:0;background-color:#F6F6F8;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
+  <!-- Preheader Text (unsichtbar im Textkörper, sichtbar in Posteingangsliste) -->
+  <div style="display:none;font-size:1px;color:#F6F6F8;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
     ${escapeHtml(meta.preheader)}
+    ${'&zwnj;&nbsp;'.repeat(30)}
   </div>
 
-  <div class="nl-outer-wrapper">
-    <div class="nl-container">
+  <!-- AUSSEN-TABELLE: 100% Helles Grau #F6F6F8 mit bgcolor -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F6F6F8" class="nl-outer-table" style="width:100%;background-color:#F6F6F8;margin:0;padding:20px 0;table-layout:fixed;">
+    <tr>
+      <td align="center" bgcolor="#F6F6F8" style="background-color:#F6F6F8;padding:12px 10px;">
+        <!--[if (gte mso 9)|(IE)]>
+        <table align="center" border="0" cellspacing="0" cellpadding="0" width="600" style="width:600px;">
+        <tr>
+        <td align="center" valign="top" width="600" style="width:600px;">
+        <![endif]-->
+        
+        <!-- INNEN-CONTAINER: Max 600px Inhaltsbreite gemäss Style Guide -->
+        <table role="presentation" class="nl-container-table" align="center" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;width:100%;margin:0 auto;border-collapse:separate;">
 
-      <!-- BLOCK 1: HEADER (Weisser Hintergrund, 24px Padding, 20px Radius) -->
-      <div class="nl-block nl-header-block">
-        <a href="https://www.autolina.ch" target="_blank" rel="noopener noreferrer">
-          ${getAutolinaLogoSvg(172, 38)}
-        </a>
-      </div>
+          <!-- ================= BLOCK 1: HEADER ================= -->
+          <tr>
+            <td class="nl-card-header" align="center" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border-radius:20px;border:1px solid #E5E5E8;padding:24px;text-align:center;">
+              <a href="https://www.autolina.ch" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;border:0;">
+                <img src="${AUTOLINA_LIVE_LOGO_PNG}" alt="autolina.ch" width="172" height="38" border="0" style="display:block;margin:0 auto;border:0;width:172px;height:38px;outline:none;text-decoration:none;" />
+              </a>
+            </td>
+          </tr>
 
-      <!-- BLOCK 2: INHALT (Weisser Hintergrund, 32px Padding, 20px Radius, 24px Abstand) -->
-      <div class="nl-block nl-content-block">
-        <div class="nl-stack">
-${renderedContent}
-        </div>
+          <!-- 16px ABSTAND -->
+          <tr>
+            <td height="16" style="height:16px;line-height:16px;font-size:1px;mso-line-height-rule:exactly;">&nbsp;</td>
+          </tr>
 
-        <!-- Feste Grussformel gemäss Style Guide (Abschnitt 4) -->
-        <div class="nl-closing">
-          <p>Liebe Grüsse,<br />Dein autolina Team</p>
-        </div>
-      </div>
+          <!-- ================= BLOCK 2: INHALT ================= -->
+          <tr>
+            <td class="nl-card-block" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border-radius:20px;border:1px solid #E5E5E8;padding:32px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+${nodeRowsWithSpacers}
+              </table>
 
-      <!-- BLOCK 3: FOOTER (Weisser Hintergrund, 32px Padding, 20px Radius, 24px Abstand) -->
-      <div class="nl-block nl-footer-block">
-        <div class="nl-footer-stack">
-          <!-- 1. autolina-Logo (zentriert) -->
-          <div>
-            <a href="https://www.autolina.ch" target="_blank" rel="noopener noreferrer">
-              ${getAutolinaLogoSvg(150, 32)}
-            </a>
-          </div>
+              <!-- Feste Grussformel am Ende des Inhaltsblocks -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:28px;border-top:1px solid #E5E5E8;">
+                <tr>
+                  <td class="nl-font" style="padding-top:20px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:150%;color:#000000;text-align:left;">
+                    Liebe Gr&uuml;sse,<br />Dein autolina Team
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-          <!-- 2. Adressblock (zentriert) -->
-          <div class="nl-address-block">
-            autolina.ch ag<br />
-            Bahnhofstrasse 24c<br />
-            8570 Weinfelden, Schweiz<br />
-            <a href="mailto:service@autolina.ch">service@autolina.ch</a><br />
-            <a href="https://www.autolina.ch" target="_blank" rel="noopener noreferrer">www.autolina.ch</a>
-          </div>
+          <!-- 16px ABSTAND -->
+          <tr>
+            <td height="16" style="height:16px;line-height:16px;font-size:1px;mso-line-height-rule:exactly;">&nbsp;</td>
+          </tr>
 
-          <!-- 3. Trennlinie (#E5E5E8, 1px) -->
-          <div class="nl-divider"></div>
+          <!-- ================= BLOCK 3: FOOTER ================= -->
+          <tr>
+            <td class="nl-card-block" align="center" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border-radius:20px;border:1px solid #E5E5E8;padding:32px;text-align:center;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+                <!-- 1. autolina Logo -->
+                <tr>
+                  <td align="center" style="padding-bottom:20px;">
+                    <a href="https://www.autolina.ch" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;border:0;">
+                      <img src="${AUTOLINA_LIVE_LOGO_PNG}" alt="autolina.ch" width="150" height="33" border="0" style="display:block;margin:0 auto;border:0;width:150px;height:33px;outline:none;text-decoration:none;" />
+                    </a>
+                  </td>
+                </tr>
 
-          <!-- 4. App-Store-Badges (nebeneinander, zentriert, stacken responsive) -->
-          <div class="nl-badges-wrap">
-            ${getAppleBadgeSvgLink(120, 40)}
-            ${getGooglePlayBadgeSvgLink(135, 40)}
-          </div>
+                <!-- 2. Adressblock -->
+                <tr>
+                  <td align="center" class="nl-font" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:150%;color:#000000;padding-bottom:20px;text-align:center;">
+                    autolina.ch ag<br />
+                    Bahnhofstrasse 24c<br />
+                    8570 Weinfelden, Schweiz<br />
+                    <a href="mailto:service@autolina.ch" style="color:#2E3E6C;text-decoration:underline;">service@autolina.ch</a><br />
+                    <a href="https://www.autolina.ch" target="_blank" rel="noopener noreferrer" style="color:#2E3E6C;text-decoration:underline;">www.autolina.ch</a>
+                  </td>
+                </tr>
 
-          <!-- 5. Trennlinie (#E5E5E8, 1px) -->
-          <div class="nl-divider"></div>
+                <!-- 3. Trennlinie -->
+                <tr>
+                  <td style="padding-bottom:20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="border-top:1px solid #E5E5E8;font-size:1px;line-height:1px;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-          <!-- 6. Social-Media-Links (nebeneinander, zentriert, Icons + Text) -->
-          <div class="nl-social-wrap">
-            ${getSocialMediaLinksHtml()}
-          </div>
-        </div>
-      </div>
+                <!-- 4. App Store & Google Play Badges mit exakten Breiten gegen Outlook-Verzerrung -->
+                <tr>
+                  <td align="center" style="padding-bottom:20px;">
+                    <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                      <tr>
+                        <td align="center" valign="middle" style="padding:0 6px;">
+                          <a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;border:0;">
+                            <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/de-de?size=250x83" alt="Laden im App Store" width="120" height="40" border="0" style="display:block;width:120px;height:40px;border:0;border-radius:8px;outline:none;text-decoration:none;" />
+                          </a>
+                        </td>
+                        <td align="center" valign="middle" style="padding:0 6px;">
+                          <a href="https://play.google.com" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;border:0;">
+                            <img src="https://play.google.com/intl/en_us/badges/static/images/badges/de_badge_web_generic.png" alt="Jetzt bei Google Play" width="135" height="40" border="0" style="display:block;width:135px;height:40px;border:0;border-radius:8px;outline:none;text-decoration:none;" />
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-      ${
-        company.showSecurityNotice !== false
-          ? `<!-- BLOCK 4: SICHERHEITSHINWEIS (Dunkelblau #1B4B97, 24px Padding, 20px Radius) -->
-      <div class="nl-security-block">
-        <p><strong>Vorsicht vor Betrügern:</strong> autolina würde Sie nie nach Ihrem Passwort oder persönlichen Daten fragen oder Sie auffordern, diese zu ändern. Sollten Sie eine E-Mail mit einer entsprechenden Aufforderung erhalten, bitten wir Sie, die betreffende E-Mail zu ignorieren und umgehend unseren Support unter <a href="mailto:service@autolina.ch">service@autolina.ch</a> zu kontaktieren.</p>
-      </div>`
-          : ''
-      }
+                <!-- 5. Trennlinie -->
+                <tr>
+                  <td style="padding-bottom:16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="border-top:1px solid #E5E5E8;font-size:1px;line-height:1px;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-    </div>
-  </div>
+                <!-- 6. Social Media Links (100% E-Mail Tabellen-Layout) -->
+                <tr>
+                  <td align="center">
+                    ${getSocialMediaLinksHtml()}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${
+            company.showSecurityNotice !== false
+              ? `<!-- 16px ABSTAND -->
+          <tr>
+            <td height="16" style="height:16px;line-height:16px;font-size:1px;mso-line-height-rule:exactly;">&nbsp;</td>
+          </tr>
+
+          <!-- ================= BLOCK 4: SICHERHEITSHINWEIS ================= -->
+          <tr>
+            <td align="left" bgcolor="#1B4B97" style="background-color:#1B4B97;border-radius:20px;border:1px solid #163E7D;padding:24px;color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:150%;">
+              <p class="nl-font" style="margin:0;padding:0;color:#FFFFFF;font-size:14px;line-height:150%;">
+                <strong style="color:#FFFFFF;font-weight:bold;">Vorsicht vor Betr&uuml;gern:</strong> autolina w&uuml;rde Sie nie nach Ihrem Passwort oder pers&ouml;nlichen Daten fragen oder Sie auffordern, diese zu &auml;ndern. Sollten Sie eine E-Mail mit einer entsprechenden Aufforderung erhalten, bitten wir Sie, die betreffende E-Mail zu ignorieren und umgehend unseren Support unter <a href="mailto:service@autolina.ch" style="color:#FFFFFF;text-decoration:underline;font-weight:bold;">service@autolina.ch</a> zu kontaktieren.
+              </p>
+            </td>
+          </tr>`
+              : ''
+          }
+
+        </table>
+        <!--[if (gte mso 9)|(IE)]>
+        </td>
+        </tr>
+        </table>
+        <![endif]-->
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }
@@ -932,12 +722,12 @@ function escapeAttr(str: string): string {
 
 function formatInlineLinks(text: string): string {
   if (!text) return '';
-  // Convert email addresses to clickable mailto links
+  // E-Mail-Adressen klickbar machen
   let formatted = text.replace(
     /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi,
     '<a href="mailto:$1" style="color:#2E3E6C;text-decoration:underline;">$1</a>'
   );
-  // Convert standalone web urls (http/https or www.)
+  // Web-URLs klickbar machen
   formatted = formatted.replace(
     /(https?:\/\/[^\s]+|www\.[^\s]+)/gi,
     (match) => {
@@ -947,3 +737,4 @@ function formatInlineLinks(text: string): string {
   );
   return formatted;
 }
+

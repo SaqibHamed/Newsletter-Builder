@@ -56,8 +56,8 @@ export const availableBricks: BrickDefinition[] = [
   {
     type: 'graphic',
     name: 'Grafik / Bild',
-    specs: '12px Radius • Volle Breite',
-    description: 'Fahrzeug- oder Servicebild mit Alt-Text',
+    specs: '4:3 Format • 12px Radius',
+    description: '4:3 Platzhalter-Box (%% bezeichnung) oder eigene Bild-URL',
     icon: ImageIcon,
   },
   {
@@ -112,6 +112,7 @@ interface BricksPaletteProps {
 export const BricksPalette: React.FC<BricksPaletteProps> = ({ onAddBrick, onDragStateChange }) => {
   const handleDragStart = (e: React.DragEvent, type: NodeType) => {
     e.dataTransfer.setData('text/plain', type);
+    e.dataTransfer.setData('brick-type', type);
     e.dataTransfer.setData('application/json', JSON.stringify({ type }));
     e.dataTransfer.effectAllowed = 'copy';
     onDragStateChange?.(true, type);

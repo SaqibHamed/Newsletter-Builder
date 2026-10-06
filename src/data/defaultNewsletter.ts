@@ -52,7 +52,7 @@ export const defaultNodes: NewsletterNode[] = [
   {
     id: 'node-graphic-hero',
     type: 'graphic',
-    imageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80',
+    imageUrl: '%Bild%',
     altText: 'autolina Schweizer Fahrzeugmarkt',
     caption: 'Tausende geprüfte Occasionen und Neuwagen aus der ganzen Schweiz',
     fullWidth: true,
@@ -299,10 +299,10 @@ export const sampleTemplates: NewsletterTemplate[] = [
     id: 'test-drive',
     name: 'Ihre Probefahrt ist bestätigt',
     category: 'Probefahrt',
-    description: 'Termin-Details, Fahrzeugkarte (CHF 72\'500 Format) und Vorbereitungs-Hinweise',
+    description: 'Termin-Details (%TerminDate%, %TerminTime%, %Firma%, %FirmaOrt%), Fahrzeugkarte und Vorbereitungs-Hinweise',
     meta: {
       subject: 'Ihre Probefahrt ist bestätigt — autolina.ch',
-      preheader: 'Ihr Probefahrttermin steht fest. Alle Details und Adresse auf einen Blick.',
+      preheader: 'Ihr Probefahrttermin bei %Firma% (%FirmaOrt%) am %TerminDate% steht fest.',
       recipientSalutation: '%Anrede%',
       recipientName: '%Nachname%',
       senderName: 'autolina Team',
@@ -324,21 +324,22 @@ export const sampleTemplates: NewsletterTemplate[] = [
       {
         id: 'tmpl-td-para',
         type: 'paragraph',
-        text: 'Der Händler hat Ihren Wunschtermin für die Probefahrt verbindlich bestätigt. Das Fahrzeug steht zum vereinbarten Zeitpunkt bereit.',
+        text: 'Der Händler %Firma% in %FirmaOrt% hat Ihren Wunschtermin für die Probefahrt verbindlich bestätigt. Das Fahrzeug steht zum vereinbarten Termin für Sie bereit.',
         align: 'left',
       },
       {
         id: 'tmpl-td-sub-details',
         type: 'heading',
-        text: 'Termin-Details',
+        text: 'Termin-Details bei %Firma%',
         align: 'left',
       },
       {
         id: 'tmpl-td-bullets',
         type: 'bullet_list',
         items: [
-          'Datum & Zeit — Samstag, 17. Oktober um 10:30 Uhr',
-          'Standort — Autohaus Thurgau AG, Bahnhofstrasse 42, 8570 Weinfelden',
+          'Datum — %TerminDate%',
+          'Uhrzeit — %TerminTime%',
+          'Standort & Partner — %Firma%, %FirmaOrt%',
           'Ihr Ansprechpartner — Herr Thomas Keller (Tel. +41 71 626 50 50)',
         ],
       },

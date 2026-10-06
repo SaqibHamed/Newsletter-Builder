@@ -32,9 +32,9 @@ export function createNewNode(type: NodeType): NewsletterNode {
       return {
         id,
         type: 'graphic',
-        imageUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
-        altText: 'Grafikbeschreibung',
-        caption: 'Optionale Bildunterschrift',
+        imageUrl: '%Bild%',
+        altText: 'Grafik',
+        caption: '',
         fullWidth: true,
       };
 
@@ -64,8 +64,8 @@ export function createNewNode(type: NodeType): NewsletterNode {
       return {
         id,
         type: 'two_col_left_graphic',
-        imageUrl: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80',
-        altText: 'Projektansicht',
+        imageUrl: '%Bild%',
+        altText: 'Grafik',
         heading: 'Themenblock mit Bild links',
         paragraph: 'Erklärender Textabschnitt passend zur linken Grafik. Ideal für Feature-Vorstellungen oder Team-Notizen.',
         buttonText: 'Mehr erfahren',
@@ -76,8 +76,8 @@ export function createNewNode(type: NodeType): NewsletterNode {
       return {
         id,
         type: 'two_col_right_graphic',
-        imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80',
-        altText: 'Detailansicht',
+        imageUrl: '%Bild%',
+        altText: 'Grafik',
         heading: 'Themenblock mit Bild rechts',
         paragraph: 'Zweispaltiges Layout mit einleitender Überschrift und Erläuterung auf der linken Seite sowie Grafik rechts.',
         buttonText: 'Details ansehen',
@@ -98,8 +98,8 @@ export function createNewNode(type: NodeType): NewsletterNode {
       return {
         id,
         type: 'vehicle_card',
-        imageUrl: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
-        altText: 'Mercedes-Benz AMG GT 63 S E Performance 4MATIC',
+        imageUrl: '%Fahrzeugbild%',
+        altText: 'Fahrzeugbild',
         brand: '%Marke%',
         brandModel: '%Modell%',
         price: '%Preis%',

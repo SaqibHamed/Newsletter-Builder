@@ -17,16 +17,20 @@ import {
   ShieldAlert,
   ShieldCheck,
   Link as LinkIcon,
+  Layout,
+  Mail,
 } from 'lucide-react';
-import { CompanySettings, NewsletterMeta, NewsletterNode, PreviewDevice } from '../types';
+import { CompanySettings, NewsletterMeta, NewsletterNode, NodeType, PreviewDevice } from '../types';
 import { sampleTemplates } from '../data/defaultNewsletter';
+import { generateEmailHtml } from '../utils/htmlGenerator';
 import {
   AUTOLINA_ASSET_URLS,
   AUTOLINA_LOGO_DATA_URI,
   APP_STORE_BADGE_DATA_URI,
   GOOGLE_PLAY_BADGE_DATA_URI,
-  SYSTEM_TAGS,
   getSocialMediaLinksHtml,
+  formatPlaceholderTag,
+  isPlaceholderGraphic,
 } from '../utils/autolinaAssets';
 import {
   AutolinaLogo,
@@ -53,6 +57,9 @@ interface NewsletterLivePreviewProps {
   warningNotifications?: boolean;
   onToggleWarningNotifications?: () => void;
   onToggleSecurityNotice?: () => void;
+  isDraggingExternal?: boolean;
+  draggedBrickType?: NodeType | null;
+  onInsertBrickAtIndex?: (type: NodeType, index: number) => void;
 }
 
 export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
@@ -68,9 +75,13 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
   warningNotifications = true,
   onToggleWarningNotifications,
   onToggleSecurityNotice,
+  isDraggingExternal = false,
+  draggedBrickType = null,
+  onInsertBrickAtIndex,
 }) => {
   const [device, setDevice] = useState<PreviewDevice>('desktop');
   const [zoom, setZoom] = useState<number>(100);
+  const [renderMode, setRenderMode] = useState<'visual' | 'html-client'>('visual');
   // Tag-Modus: 'tags' (zeigt %Anrede% und %Nachname% mit visueller Hervorhebung) oder 'sample' (zeigt z.B. Herr Rossi)
   const [tagPreviewMode, setTagPreviewMode] = useState<'tags' | 'sample'>('tags');
   const [sampleRecipient, setSampleRecipient] = useState({
@@ -88,7 +99,12 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
       return text
         .replace(/%Anrede%/g, sampleRecipient.anrede)
         .replace(/%Nachname%/g, sampleRecipient.nachname)
+        .replace(/%Vorname%/g, 'Max')
+        .replace(/(%Mail%|%Email%|%E-Mail%)/gi, 'max.muster@autolina.ch')
         .replace(/%Reset%/g, 'https://www.autolina.ch/konto/passwort-zuruecksetzen?token=demo')
+        .replace(/%Fahrzeugname%/g, 'Mercedes-Benz AMG GT 63 S E Performance 4MATIC')
+        .replace(/%Fahrzeugbild%/g, 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80')
+        .replace(/%Bild%/g, 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80')
         .replace(/%Marke%/g, 'Mercedes-Benz')
         .replace(/%Modell%/g, 'AMG GT 63 S E Performance 4MATIC')
         .replace(/%Preis%/g, "CHF 72'500")
@@ -97,16 +113,21 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
         .replace(/%PS%/g, '1296 PS')
         .replace(/%Schaltung%/g, 'Handschaltung')
         .replace(/%Energie%/g, 'Plug-in-Hybrid')
-        .replace(/%Antrieb%/g, 'Vorderradantrieb');
+        .replace(/%Antrieb%/g, 'Vorderradantrieb')
+        .replace(/%FirmaOrt%/g, 'Zürich')
+        .replace(/%Firma%/g, 'Garage Muster AG')
+        .replace(/%TerminDate%/g, '15.10.2026')
+        .replace(/%TerminTime%/g, '14:30 Uhr');
     }
     // 'tags' Modus: Tags werden visuell hervorgehoben dargestellt
     const parts = text.split(
-      /(%Anrede%|%Nachname%|%Reset%|%Marke%|%Modell%|%Preis%|%Datum%|%KM%|%PS%|%Schaltung%|%Energie%|%Antrieb%)/g
+      /(%Anrede%|%Nachname%|%Vorname%|%Mail%|%Email%|%E-Mail%|%Reset%|%Fahrzeugname%|%Fahrzeugbild%|%Bild%|%Marke%|%Modell%|%Preis%|%Datum%|%KM%|%PS%|%Schaltung%|%Energie%|%Antrieb%|%FirmaOrt%|%Firma%|%TerminDate%|%TerminTime%)/gi
     );
     if (parts.length === 1) return text;
 
     return parts.map((part, i) => {
-      if (part === '%Anrede%') {
+      const lower = part.toLowerCase();
+      if (lower === '%anrede%') {
         return (
           <span
             key={i}
@@ -117,7 +138,7 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
           </span>
         );
       }
-      if (part === '%Nachname%') {
+      if (lower === '%nachname%') {
         return (
           <span
             key={i}
@@ -128,7 +149,29 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
           </span>
         );
       }
-      if (part === '%Reset%') {
+      if (lower === '%vorname%') {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-sky-100 text-sky-900 font-mono text-[0.88em] border border-sky-300 font-bold mx-0.5 shadow-2xs select-all"
+            title="System-Tag: %Vorname% (Wird vom System durch den Vornamen ersetzt)"
+          >
+            %Vorname%
+          </span>
+        );
+      }
+      if (lower === '%mail%' || lower === '%email%' || lower === '%e-mail%') {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-100 text-purple-950 font-mono text-[0.88em] border border-purple-300 font-bold mx-0.5 shadow-2xs select-all"
+            title="System-Tag: %Mail% (E-Mail-Adresse des Empfängers)"
+          >
+            %Mail%
+          </span>
+        );
+      }
+      if (lower === '%reset%') {
         return (
           <span
             key={i}
@@ -139,16 +182,50 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
           </span>
         );
       }
+      if (lower === '%firma%' || lower === '%firmaort%') {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-orange-100 text-orange-950 font-mono text-[0.88em] border border-orange-300 font-bold mx-0.5 shadow-2xs select-all"
+            title={`Partner-Tag: ${part} (Name oder Standort des Partnerunternehmens)`}
+          >
+            {part}
+          </span>
+        );
+      }
+      if (lower === '%termindate%' || lower === '%termintime%') {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-950 font-mono text-[0.88em] border border-cyan-300 font-bold mx-0.5 shadow-2xs select-all"
+            title={`Termin-Tag: ${part} (Vereinbartes Datum oder Uhrzeit)`}
+          >
+            {part}
+          </span>
+        );
+      }
+      if (lower === '%fahrzeugbild%' || lower === '%bild%') {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-950 font-mono text-[0.85em] border border-indigo-300 font-semibold mx-0.5 shadow-2xs select-all"
+            title={`Bild System-Tag: ${part}`}
+          >
+            {part}
+          </span>
+        );
+      }
       if (
-        part === '%Marke%' ||
-        part === '%Modell%' ||
-        part === '%Preis%' ||
-        part === '%Datum%' ||
-        part === '%KM%' ||
-        part === '%PS%' ||
-        part === '%Schaltung%' ||
-        part === '%Energie%' ||
-        part === '%Antrieb%'
+        lower === '%marke%' ||
+        lower === '%modell%' ||
+        lower === '%fahrzeugname%' ||
+        lower === '%preis%' ||
+        lower === '%datum%' ||
+        lower === '%km%' ||
+        lower === '%ps%' ||
+        lower === '%schaltung%' ||
+        lower === '%energie%' ||
+        lower === '%antrieb%'
       ) {
         return (
           <span
@@ -232,6 +309,36 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
             >
               <Smartphone className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Mobile</span>
+            </button>
+          </div>
+
+          {/* Render-Modus: Designer (Interaktiv) vs E-Mail-Client (HTML) */}
+          <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setRenderMode('visual')}
+              className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 transition-colors ${
+                renderMode === 'visual'
+                  ? 'bg-zinc-900 text-white font-semibold'
+                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+              }`}
+              title="Interaktiver Designer mit Klick-Auswahl und Drag & Drop"
+            >
+              <Layout className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Designer</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRenderMode('html-client')}
+              className={`px-2 py-1 text-xs font-medium rounded flex items-center gap-1 transition-colors ${
+                renderMode === 'html-client'
+                  ? 'bg-[#2E3E6C] text-white font-semibold shadow-2xs'
+                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+              }`}
+              title="Echtes HTML-Rendering wie in Outlook, Gmail und Apple Mail nach dem Versand"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">E-Mail Client (HTML)</span>
             </button>
           </div>
 
@@ -419,6 +526,29 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
               : 'nl-device-desktop'
           }`}
         >
+          {renderMode === 'html-client' ? (
+            <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
+              <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                  <span className="font-semibold text-slate-800">
+                    Echter E-Mail-Client Renderer (Sandboxed Iframe)
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500">
+                  Tabellen &amp; Inline-CSS • {containerWidthStyle}
+                </span>
+              </div>
+              <iframe
+                title="E-Mail Client HTML Vorschau"
+                srcDoc={generateEmailHtml(nodes, meta, company)}
+                className="w-full border-0"
+                style={{ minHeight: '820px', height: '100%', width: '100%', display: 'block' }}
+                sandbox="allow-same-origin"
+              />
+            </div>
+          ) : (
+            <>
           {/* BLOCK 1: HEADER (Weisser Hintergrund, 24px Padding, 20px Radius) */}
           <div className="nl-card nl-header-card flex items-center justify-center">
             <a
@@ -437,9 +567,51 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
           </div>
 
           {/* BLOCK 2: INHALT (Weisser Hintergrund, 32px Padding, 20px Radius, 24px innerer Abstand) */}
-          <div id="preview-newsletter-card" className="nl-card nl-content-card">
+          <div
+            id="preview-newsletter-card"
+            className={`nl-card nl-content-card transition-all ${
+              isDraggingExternal ? 'ring-2 ring-dashed ring-teal-500/80' : ''
+            }`}
+            onDragOver={(e) => {
+              if (onInsertBrickAtIndex) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+              }
+            }}
+            onDrop={(e) => {
+              if (onInsertBrickAtIndex) {
+                e.preventDefault();
+                e.stopPropagation();
+                const validTypes: NodeType[] = [
+                  'title',
+                  'heading',
+                  'paragraph',
+                  'graphic',
+                  'bullet_list',
+                  'numbered_list',
+                  'two_col_left_graphic',
+                  'two_col_right_graphic',
+                  'button_cta',
+                  'vehicle_card',
+                  'url',
+                ];
+                let bType = e.dataTransfer.getData('brick-type') as NodeType;
+                if (!bType || !validTypes.includes(bType)) {
+                  bType = e.dataTransfer.getData('text/plain') as NodeType;
+                }
+                if (!bType || !validTypes.includes(bType)) {
+                  if (draggedBrickType && validTypes.includes(draggedBrickType)) {
+                    bType = draggedBrickType;
+                  }
+                }
+                if (bType && validTypes.includes(bType)) {
+                  onInsertBrickAtIndex(bType, nodes.length);
+                }
+              }
+            }}
+          >
             <div className="nl-stack">
-              {nodes.map((node) => {
+              {nodes.map((node, index) => {
                 const isSelected = selectedNodeId === node.id;
                 const interactiveClasses = onSelectNode
                   ? `cursor-pointer transition-all duration-150 p-1 -m-1 rounded-lg ${
@@ -449,7 +621,42 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                     }`
                   : '';
 
-                switch (node.type) {
+                const handleNodeDrop = (e: React.DragEvent) => {
+                  if (!onInsertBrickAtIndex) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const validTypes: NodeType[] = [
+                    'title',
+                    'heading',
+                    'paragraph',
+                    'graphic',
+                    'bullet_list',
+                    'numbered_list',
+                    'two_col_left_graphic',
+                    'two_col_right_graphic',
+                    'button_cta',
+                    'vehicle_card',
+                    'url',
+                  ];
+                  let bType = e.dataTransfer.getData('brick-type') as NodeType;
+                  if (!bType || !validTypes.includes(bType)) {
+                    bType = e.dataTransfer.getData('text/plain') as NodeType;
+                  }
+                  if (!bType || !validTypes.includes(bType)) {
+                    if (draggedBrickType && validTypes.includes(draggedBrickType)) {
+                      bType = draggedBrickType;
+                    }
+                  }
+                  if (bType && validTypes.includes(bType)) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    const targetIdx = e.clientY < midY ? index : index + 1;
+                    onInsertBrickAtIndex(bType, targetIdx);
+                  }
+                };
+
+                const renderNodeItem = () => {
+                  switch (node.type) {
                   case 'title': {
                     const alignClass =
                       node.align === 'center'
@@ -510,27 +717,46 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                     );
                   }
 
-                  case 'graphic':
+                  case 'graphic': {
+                    const isPlaceholder =
+                      isPlaceholderGraphic(node.imageUrl) ||
+                      (tagPreviewMode === 'tags' &&
+                        (node.imageUrl === '%Bild%' || node.imageUrl === '%Fahrzeugbild%'));
+                    const placeholderTag = formatPlaceholderTag(node.imageUrl, 'Bild');
+
                     return (
                       <div
                         key={node.id}
                         onClick={() => onSelectNode?.(node.id)}
-                        className={`nl-graphic ${interactiveClasses}`}
+                        className={`nl-graphic ${interactiveClasses} relative`}
                       >
-                        <img
-                          src={node.imageUrl}
-                          alt={node.altText || 'Grafik'}
-                          className="nl-img"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              'https://placehold.co/600x300/f6f6f8/94a3b8?text=autolina+Grafik';
-                          }}
-                        />
+                        {isPlaceholder ? (
+                          <div
+                            className="w-full aspect-[4/3] rounded-[12px] bg-[#F4F4F6] border border-dashed border-zinc-300 flex items-center justify-center p-6 text-center select-none"
+                            style={{ aspectRatio: '4/3' }}
+                          >
+                            <span className="font-mono text-sm sm:text-base font-semibold text-zinc-600 tracking-wider">
+                              {placeholderTag}
+                            </span>
+                          </div>
+                        ) : (
+                          <img
+                            src={node.imageUrl}
+                            alt={node.altText || 'Grafik'}
+                            className="nl-img"
+                            style={{ aspectRatio: '4/3', objectFit: 'cover' }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src =
+                                'https://placehold.co/600x450/f4f4f6/94a3b8?text=autolina+Grafik';
+                            }}
+                          />
+                        )}
                         {node.caption && (
                           <p className="nl-caption">{renderWithTags(node.caption)}</p>
                         )}
                       </div>
                     );
+                  }
 
                   case 'bullet_list':
                     return (
@@ -574,22 +800,40 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
 
                   case 'two_col_left_graphic': {
                     const isMobile = device === 'mobile';
+                    const isPlaceholder =
+                      isPlaceholderGraphic(node.imageUrl) ||
+                      (tagPreviewMode === 'tags' &&
+                        (node.imageUrl === '%Bild%' || node.imageUrl === '%Fahrzeugbild%'));
+                    const placeholderTag = formatPlaceholderTag(node.imageUrl, 'Bild');
+
                     return (
                       <div
                         key={node.id}
                         onClick={() => onSelectNode?.(node.id)}
                         className={`nl-twocol ${isMobile ? 'nl-twocol-mobile' : ''} ${interactiveClasses}`}
                       >
-                        {/* 1. Grafik */}
-                        <div className="nl-twocol-media">
-                          <img
-                            src={node.imageUrl}
-                            alt={node.altText || ''}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                'https://placehold.co/400x300/f6f6f8/94a3b8?text=Grafik';
-                            }}
-                          />
+                        {/* 1. Grafik (4:3 Proportion) */}
+                        <div className="nl-twocol-media relative overflow-hidden">
+                          {isPlaceholder ? (
+                            <div
+                              className="w-full aspect-[4/3] rounded-[12px] bg-[#F4F4F6] border border-dashed border-zinc-300 flex items-center justify-center p-4 text-center select-none"
+                              style={{ aspectRatio: '4/3' }}
+                            >
+                              <span className="font-mono text-xs sm:text-sm font-semibold text-zinc-600 tracking-wider">
+                                {placeholderTag}
+                              </span>
+                            </div>
+                          ) : (
+                            <img
+                              src={node.imageUrl}
+                              alt={node.altText || ''}
+                              className="w-full aspect-[4/3] object-cover rounded-[12px]"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  'https://placehold.co/400x300/f4f4f6/94a3b8?text=Grafik';
+                              }}
+                            />
+                          )}
                         </div>
                         {/* 2. Titel, 3. Text, 4. Button */}
                         <div className="nl-twocol-body">
@@ -614,6 +858,12 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
 
                   case 'two_col_right_graphic': {
                     const isMobile = device === 'mobile';
+                    const isPlaceholder =
+                      isPlaceholderGraphic(node.imageUrl) ||
+                      (tagPreviewMode === 'tags' &&
+                        (node.imageUrl === '%Bild%' || node.imageUrl === '%Fahrzeugbild%'));
+                    const placeholderTag = formatPlaceholderTag(node.imageUrl, 'Bild');
+
                     return (
                       <div
                         key={node.id}
@@ -622,16 +872,28 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                           isMobile ? 'nl-twocol-mobile' : 'nl-twocol-reverse'
                         } ${interactiveClasses}`}
                       >
-                        {/* 1. Grafik (Auf Mobile immer oben) */}
-                        <div className="nl-twocol-media">
-                          <img
-                            src={node.imageUrl}
-                            alt={node.altText || ''}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                'https://placehold.co/400x300/f6f6f8/94a3b8?text=Grafik';
-                            }}
-                          />
+                        {/* 1. Grafik (Auf Mobile immer oben, 4:3 Proportion) */}
+                        <div className="nl-twocol-media relative overflow-hidden">
+                          {isPlaceholder ? (
+                            <div
+                              className="w-full aspect-[4/3] rounded-[12px] bg-[#F4F4F6] border border-dashed border-zinc-300 flex items-center justify-center p-4 text-center select-none"
+                              style={{ aspectRatio: '4/3' }}
+                            >
+                              <span className="font-mono text-xs sm:text-sm font-semibold text-zinc-600 tracking-wider">
+                                {placeholderTag}
+                              </span>
+                            </div>
+                          ) : (
+                            <img
+                              src={node.imageUrl}
+                              alt={node.altText || ''}
+                              className="w-full aspect-[4/3] object-cover rounded-[12px]"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  'https://placehold.co/400x300/f4f4f6/94a3b8?text=Grafik';
+                              }}
+                            />
+                          )}
                         </div>
                         {/* 2. Titel, 3. Text, 4. Button */}
                         <div className="nl-twocol-body">
@@ -680,6 +942,13 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                   }
 
                   case 'vehicle_card': {
+                    const isPlaceholder =
+                      isPlaceholderGraphic(node.imageUrl) ||
+                      (tagPreviewMode === 'tags' &&
+                        (node.imageUrl === '%Fahrzeugbild%' || node.imageUrl === '%Bild%'));
+                    const placeholderTag = formatPlaceholderTag(node.imageUrl, 'Fahrzeugbild');
+                    const sampleVehicleImg =
+                      'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80';
                     const brand = node.brand || (node.brandModel?.includes(' ') ? node.brandModel.split(' ')[0] : 'Mercedes-Benz');
                     const model = node.brandModel || '%Modell%';
                     const price = node.price || "CHF 72'500";
@@ -696,17 +965,30 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                         onClick={() => onSelectNode?.(node.id)}
                         className={`nl-vehicle-card-v2 p-3.5 sm:p-4 bg-[#F4F4F6] rounded-2xl border border-slate-200/80 transition-all ${interactiveClasses}`}
                       >
-                        {/* 1. Fahrzeug-Bild */}
-                        <div className="w-full overflow-hidden rounded-xl bg-slate-200 aspect-[16/10] max-h-[300px]">
-                          <img
-                            src={node.imageUrl}
-                            alt={node.altText || model}
-                            className="w-full h-full object-cover rounded-xl"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80';
-                            }}
-                          />
+                        {/* 1. Fahrzeug-Bild (4:3 Proportion) */}
+                        <div
+                          className="w-full overflow-hidden rounded-xl bg-slate-200 aspect-[4/3] max-h-[340px] relative"
+                          style={{ aspectRatio: '4/3' }}
+                        >
+                          {isPlaceholder && tagPreviewMode === 'tags' ? (
+                            <div
+                              className="w-full h-full aspect-[4/3] rounded-xl bg-[#F4F4F6] border border-dashed border-zinc-300 flex items-center justify-center p-4 text-center select-none"
+                              style={{ aspectRatio: '4/3' }}
+                            >
+                              <span className="font-mono text-xs sm:text-sm font-semibold text-zinc-600 tracking-wider">
+                                {placeholderTag}
+                              </span>
+                            </div>
+                          ) : (
+                            <img
+                              src={isPlaceholder ? sampleVehicleImg : node.imageUrl}
+                              alt={node.altText || model}
+                              className="w-full h-full object-cover rounded-xl"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = sampleVehicleImg;
+                              }}
+                            />
+                          )}
                         </div>
 
                         {/* 2. Marke, Modell & Preis */}
@@ -722,8 +1004,8 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                           </div>
                         </div>
 
-                        {/* 3. 6 Spezifikationen (2 Zeilen x 3 Spalten) */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {/* 3. 6 Spezifikationen (Gliederung Mobile: 2 Spalten x 3 Reihen; Desktop: 3 Spalten x 2 Reihen) */}
+                        <div className={`grid ${device === 'desktop' ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                           {/* Datum */}
                           <div className="bg-white rounded-xl px-2.5 py-2 flex items-center gap-2 border border-slate-100 shadow-2xs">
                             <VehicleDateIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
@@ -812,7 +1094,25 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                   default:
                     return null;
                 }
-              })}
+              };
+
+              return (
+                <div
+                  key={node.id}
+                  onDragOver={(e) => {
+                    if (onInsertBrickAtIndex) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = 'copy';
+                    }
+                  }}
+                  onDrop={handleNodeDrop}
+                  className="transition-all"
+                >
+                  {renderNodeItem()}
+                </div>
+              );
+            })}
             </div>
 
             {/* Feste Grussformel gemäss Style Guide */}
@@ -925,6 +1225,8 @@ export const NewsletterLivePreview: React.FC<NewsletterLivePreviewProps> = ({
                 zu kontaktieren.
               </p>
             </div>
+          )}
+          </>
           )}
         </div>
       </div>

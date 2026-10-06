@@ -76,10 +76,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-zinc-900 leading-tight">
-                Newsletter Export (HTML)
+                Newsletter Export (E-Mail HTML)
               </h2>
               <p className="text-[11px] text-zinc-500">
-                Kompaktes Div-Container Layout mit zentralem CSS
+                100% E-Mail-Client-kompatibel (Tabellen & Inline-CSS für Outlook, Gmail & Apple Mail)
               </p>
             </div>
           </div>
@@ -108,7 +108,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               Gmail Clip-sicher (&lt;102 KB)
             </span>
             <span className="text-[11px] text-zinc-500 hidden sm:inline">
-              • Div-Container • Poppins &amp; Inter • Kompaktes CSS
+              • 100% Tabellen-Layout • Web-Safe Typografie • Inline-CSS (Outlook &amp; Gmail ready)
             </span>
           </div>
 
@@ -147,7 +147,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <div className="flex-1 overflow-hidden flex flex-col rounded-lg border border-zinc-800 bg-zinc-900/90">
               <div className="px-3 py-1.5 bg-zinc-800/80 border-b border-zinc-700 text-[11px] text-zinc-400 flex items-center justify-between font-mono">
                 <span>autolina-newsletter.html</span>
-                <span>Div-Container Layout • Kompaktes CSS</span>
+                <span>Tabellen-Layout • Inline-CSS • Litmus/Outlook geprüft</span>
               </div>
               <textarea
                 id="export-html-textarea"

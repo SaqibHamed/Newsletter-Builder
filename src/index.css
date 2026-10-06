@@ -110,6 +110,28 @@
   display: block;
 }
 
+/* 4:3 Platzhalter-Box ohne Bild */
+.nl-graphic-box-43 {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-color: #F4F4F6;
+  border: 1px dashed #CBD5E1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.nl-graphic-tag {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748B;
+  letter-spacing: 0.5px;
+}
+
 .nl-caption {
   font-family: 'Inter', Arial, Helvetica, sans-serif;
   font-size: 14px;

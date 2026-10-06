@@ -201,11 +201,14 @@ export const NodeEditorItem: React.FC<NodeEditorItemProps> = ({
         </div>
 
         {/* Node Actions */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             disabled={index === 0}
-            onClick={() => onMove(index, 'up')}
+            onClick={(e) => {
+              e.stopPropagation();
+              onMove(index, 'up');
+            }}
             className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200/60 rounded transition-colors"
             title="Nach oben verschieben"
           >
@@ -214,7 +217,10 @@ export const NodeEditorItem: React.FC<NodeEditorItemProps> = ({
           <button
             type="button"
             disabled={index === total - 1}
-            onClick={() => onMove(index, 'down')}
+            onClick={(e) => {
+              e.stopPropagation();
+              onMove(index, 'down');
+            }}
             className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200/60 rounded transition-colors"
             title="Nach unten verschieben"
           >
@@ -222,7 +228,10 @@ export const NodeEditorItem: React.FC<NodeEditorItemProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onDuplicate(node.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate(node.id);
+            }}
             className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded transition-colors"
             title="Node duplizieren"
           >
@@ -230,7 +239,10 @@ export const NodeEditorItem: React.FC<NodeEditorItemProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => onDelete(node.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(node.id);
+            }}
             className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
             title="Node löschen"
           >

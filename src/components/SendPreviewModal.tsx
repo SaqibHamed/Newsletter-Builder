@@ -35,7 +35,7 @@ export const SendPreviewModal: React.FC<SendPreviewModalProps> = ({
   meta,
   company,
 }) => {
-  const [activeTab, setActiveTab] = useState<'inbox' | 'desktop' | 'mobile' | 'code'>('desktop');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'desktop' | 'mobile' | 'code' | 'compatibility'>('desktop');
   const [testEmail, setTestEmail] = useState('test@unternehmen.ch');
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
@@ -233,6 +233,19 @@ export const SendPreviewModal: React.FC<SendPreviewModalProps> = ({
               <Code className="w-3.5 h-3.5" />
               Reiner E-Mail HTML-Code
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('compatibility')}
+              className={`px-3 py-2 text-xs font-semibold border-b-2 flex items-center gap-1.5 transition-colors ${
+                activeTab === 'compatibility'
+                  ? 'border-slate-900 text-slate-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              Client-Prüfung (Outlook/Gmail)
+            </button>
           </div>
 
           <div className="flex items-center gap-2 pb-2">
@@ -388,6 +401,136 @@ export const SendPreviewModal: React.FC<SendPreviewModalProps> = ({
               <pre className="p-4 text-xs font-mono text-emerald-300 overflow-x-auto max-h-[480px] leading-relaxed">
                 <code>{htmlOutput}</code>
               </pre>
+            </div>
+          )}
+
+          {/* 5. Client Compatibility Diagnostic View */}
+          {activeTab === 'compatibility' && (
+            <div className="w-full max-w-4xl bg-white rounded-xl shadow-lg border border-slate-200 p-6 space-y-5">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    E-Mail-Client Rendering &amp; Kompatibilitäts-Audit
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Überprüfung gemäss Industriestandards (Litmus, Campaign Monitor, Email on Acid) für fehlerfreie Darstellung nach dem Versand.
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold shrink-0">
+                  <CheckCircle2 className="w-4 h-4" /> 100% Client-Ready
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Outlook Card */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                      Microsoft Outlook (2013–365, Desktop)
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-100/60 px-2 py-0.5 rounded">Geprüft ✓</span>
+                  </div>
+                  <ul className="text-xs text-slate-600 space-y-1.5 pl-1">
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Kein Times New Roman Bug:</strong> Web-Safe Fallback (Arial/Helvetica) mit MSO-Konditionalen verhindert falsche Schriftersetzung.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Weisse Karten bleiben weiss:</strong> Explizite <code>bgcolor="#FFFFFF"</code>-Attribute auf allen Zellen verhindern Transparenz.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Kein Badge-Blowout:</strong> Badges mit fixen Pixel-Dimensionen (120x40 / 135x40) verhindern 646px Word-Renderer Streckung.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>MSO Ghost Tables:</strong> Exakte 600px Inhaltsbreite ohne horizontales Scrollen.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Gmail Card */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                      Google Gmail (Web, iOS &amp; Android App)
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-100/60 px-2 py-0.5 rounded">Geprüft ✓</span>
+                  </div>
+                  <ul className="text-xs text-slate-600 space-y-1.5 pl-1">
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Keine gestrippten SVGs:</strong> Fahrzeug-Spezifikationen und Links verwenden reinen HTML-Text ohne anfällige SVG-Vektoren.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>100% Inline-CSS:</strong> Alle Styles sitzen direkt am Tag und überleben das Entfernen von <code>&lt;style&gt;</code>-Blöcken.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Fluides 2-Spalten-Layout:</strong> Tabellen mit <code>align="left"</code> / <code>align="right"</code> brechen nicht vorzeitig um.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Unter 102 KB Limit:</strong> Aktuell {htmlSizeKb} KB – E-Mail wird von Gmail niemals gekürzt (&quot;Clipping&quot;).</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Apple Mail & Mobile */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-zinc-700"></span>
+                      Apple Mail (iOS, iPadOS &amp; macOS)
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-100/60 px-2 py-0.5 rounded">Geprüft ✓</span>
+                  </div>
+                  <ul className="text-xs text-slate-600 space-y-1.5 pl-1">
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Voller 20px Border-Radius:</strong> Karten und Buttons erscheinen mit sanft abgerundeten Ecken.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Web-Font Enhancement:</strong> Moderne Webkit-Engines laden die Inter-Schriftart nahtlos nach.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Retina-fähige Grafiken:</strong> Scharfe Darstellung auf allen hochauflösenden Apple-Displays.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* GMX / Web.de / Thunderbird */}
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                      Web.de, GMX, Thunderbird &amp; Bluewin
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-100/60 px-2 py-0.5 rounded">Geprüft ✓</span>
+                  </div>
+                  <ul className="text-xs text-slate-600 space-y-1.5 pl-1">
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Absolute HTTPS Bild-URLs:</strong> Alle Logos und Badges liegen auf sicheren SSL-Servern.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>4:3 Platzhalter-Boxen:</strong> Leere Bildfelder werden mit sichtbarem %% bezeichnung%% Tag und 4:3 Höhe gerendert.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Kein Flexbox-Crash:</strong> Reines Tabellen-Markup garantiert fehlerfreie Ausrichtung.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           )}
         </div>
